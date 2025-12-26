@@ -8,6 +8,9 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import essa.entity.enums.FileType;
+import essa.entity.enums.FileStatus;
+
 @Entity
 @Table(name = "files")
 @Inheritance(strategy = InheritanceType.JOINED)
@@ -34,54 +37,51 @@ public class File {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "file_type", nullable = false)
+    private FileType fileType;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false, columnDefinition = "file_status_enum")
-    private Status status = Status.PENDING;
+    private FileStatus status = FileStatus.PENDING;
 
     @Column(name = "owner_keycloak_id", nullable = false, length = 255)
     private String ownerKeycloakId;
 
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
+    @Column(name = "created", nullable = false)
+    private OffsetDateTime created;
 
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
+    @Column(name = "modified", nullable = false)
+    private OffsetDateTime modified;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "file_tag",
-        joinColumns = @JoinColumn(name = "file_id"),
-        inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
-    private Set<Tag> tags = new HashSet<>();
+    /** Image variants (only for IMAGE files) */
+    @OneToMany(mappedBy = "file", cascade = CascadeType.ALL, orphanRemoval = true)
+    public Set<ImageLevelOfDetail> imageLOD = new HashSet<>();
 
-    @ElementCollection
-    @CollectionTable(
-        name = "file_access",
-        joinColumns = @JoinColumn(name = "file_id")
-    )
-    @Column(name = "keycloak_id")
-    private Set<String> accessKeycloakIds = new HashSet<>();
+    /** Tags assigned to this file */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "file_tag", joinColumns = @JoinColumn(name = "file_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    public Set<Tag> tags = new HashSet<>();
 
-    @ElementCollection
-    @CollectionTable(
-        name = "property_file",
-        joinColumns = @JoinColumn(name = "file_id")
-    )
-    @Column(name = "property_id")
-    private Set<Long> propertyIds = new HashSet<>();
+    /** Access grants for other users */
+    @OneToMany(mappedBy = "file", cascade = CascadeType.ALL, orphanRemoval = true)
+    public Set<FileAccess> accessEntries = new HashSet<>();
+
+    /** Links to properties */
+    @OneToMany(mappedBy = "file", cascade = CascadeType.ALL, orphanRemoval = true)
+    public Set<PropertyFile> propertyLinks = new HashSet<>();
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = OffsetDateTime.now();
-        this.updatedAt = OffsetDateTime.now();
+        this.created = OffsetDateTime.now();
+        this.modified = OffsetDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = OffsetDateTime.now();
+        this.modified = OffsetDateTime.now();
     }
 
-    // Getters and Setters
     public UUID getId() {
         return id;
     }
@@ -104,6 +104,14 @@ public class File {
 
     public void setContentType(String contentType) {
         this.contentType = contentType;
+    }
+
+    public FileType getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(FileType fileType) {
+        this.fileType = fileType;
     }
 
     public Long getFileSize() {
@@ -130,11 +138,11 @@ public class File {
         this.objectName = objectName;
     }
 
-    public Status getStatus() {
+    public FileStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Status status) {
+    public void setStatus(FileStatus status) {
         this.status = status;
     }
 
@@ -146,53 +154,19 @@ public class File {
         this.ownerKeycloakId = ownerKeycloakId;
     }
 
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
+    public OffsetDateTime getCreated() {
+        return created;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setCreated(OffsetDateTime created) {
+        this.created = created;
     }
 
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
+    public OffsetDateTime getModified() {
+        return modified;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Set<Tag> getTags() {
-        return tags;
-    }
-
-    public void setTags(Set<Tag> tags) {
-        this.tags = tags;
-    }
-
-    public void addTag(Tag tag) {
-        this.tags.add(tag);
-        tag.getFiles().add(this);
-    }
-
-    public void removeTag(Tag tag) {
-        this.tags.remove(tag);
-        tag.getFiles().remove(this);
-    }
-
-    public Set<String> getAccessKeycloakIds() {
-        return accessKeycloakIds;
-    }
-
-    public void setAccessKeycloakIds(Set<String> accessKeycloakIds) {
-        this.accessKeycloakIds = accessKeycloakIds;
-    }
-
-    public Set<Long> getPropertyIds() {
-        return propertyIds;
-    }
-
-    public void setPropertyIds(Set<Long> propertyIds) {
-        this.propertyIds = propertyIds;
+    public void setModified(OffsetDateTime modified) {
+        this.modified = modified;
     }
 }

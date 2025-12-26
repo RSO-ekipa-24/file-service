@@ -28,7 +28,7 @@ public class FileRepository {
     }
 
     @Transactional
-    public File update(@NotNull File file) {
+    public File merge(@NotNull File file) {
         return em.merge(file);
     }
 

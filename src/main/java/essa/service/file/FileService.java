@@ -2,8 +2,10 @@ package essa.service.file;
 
 import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
+import essa.dto.file.FileMetadataResponse;
 import essa.entity.File;
-import essa.entity.Status;
+import essa.entity.enums.FileStatus;
+import essa.entity.enums.FileType;
 import essa.repository.file.FileRepository;
 import essa.repository.file.TagRepository;
 import essa.service.gcs.GcsService;
@@ -33,31 +35,44 @@ public class FileService {
     @Inject
     SecurityIdentity securityIdentity;
 
+    private static final String FILE_ROOT = "files";
+
+    private String generateObjectName(String keycloakId, UUID uuid, String fileName) {
+        StringBuilder builder = new StringBuilder(FILE_ROOT);
+        builder.append("/");
+        builder.append(keycloakId);
+        builder.append("/");
+        builder.append(uuid.toString());
+        builder.append("-");
+        builder.append(fileName);
+        return builder.toString();
+    }
+
     @Transactional
     public FileUploadResponse uploadFile(@Valid @NotNull FileUploadRequest request) throws Exception {
         String keycloakId = securityIdentity.getPrincipal().getName();
         UUID uuid = UUID.randomUUID();
 
-        StringBuilder builder = new StringBuilder("files/");
-        builder.append(keycloakId);
-        builder.append("/");
-        builder.append(uuid.toString());
-        builder.append("-");
-        builder.append(request.getFileName());
+        String objectName = generateObjectName(keycloakId, uuid, request.getFileName());
 
-        String objectName = builder.toString();
+        return handleFileUpload(keycloakId, uuid, objectName, request);
+    }
 
-        URL gcsUploadSignedUrl = gcsService.generateV4PutObjectSignedUrl(objectName, request.getContentType(), 5);
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(5);
+    @Transactional
+    public FileUploadResponse handleFileUpload(String keycloakId, UUID uuid, String objectName, FileUploadRequest request) throws Exception {
+        int durationMinutes = 5;
+        URL gcsUploadSignedUrl = gcsService.generateV4PutObjectSignedUrl(objectName, request.getContentType(), durationMinutes);
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(durationMinutes);
         
         File file = new File();
         file.setId(uuid);
         file.setFileName(request.getFileName());
         file.setContentType(request.getContentType());
+        file.setFileType(FileType.FILE);
         file.setFileSize(request.getSize());
         file.setBucketName(gcsService.getBucketName());
         file.setObjectName(objectName);
-        file.setStatus(Status.PENDING);
+        file.setStatus(FileStatus.PENDING);
         file.setOwnerKeycloakId(keycloakId);
         
         fileRepository.persist(file);
@@ -68,5 +83,49 @@ public class FileService {
         response.setExpiresAt(expiresAt);
 
         return response;
+    }
+
+
+    @Transactional
+    public boolean confirmUpload(@NotNull UUID id) throws Exception {
+        File file = fileRepository.findById(id);
+        if (file == null)
+            return false;
+        
+        if (file.getStatus() == FileStatus.AVAILABLE)
+            return true;
+        
+        if (file.getStatus() == FileStatus.PENDING) {
+            file.setStatus(FileStatus.AVAILABLE);
+            return true;
+        }
+    
+        return false;
+    }
+
+    @Transactional
+    public URL downloadFile(@NotNull UUID id) {
+        File file = fileRepository.findById(id);
+        if (file == null || file.getStatus() != FileStatus.AVAILABLE) {
+            return null;
+        }
+        int durationMinutes = 5;
+        return gcsService.generateV4GetObjectSignedUrl(file.getObjectName(), durationMinutes);
+    }
+
+    @Transactional
+    public FileMetadataResponse getFileMetadata(@NotNull UUID id) {
+        File file = fileRepository.findById(id);
+        if (file == null) {
+            return null;
+        }
+        return new FileMetadataResponse(
+                file.getId(),
+                file.getFileName(),
+                file.getContentType(),
+                file.getFileSize(),
+                file.getCreated().toLocalDateTime(),
+                file.getModified().toLocalDateTime()
+        );
     }
 }

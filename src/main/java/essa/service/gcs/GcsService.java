@@ -74,4 +74,17 @@ public class GcsService {
         );
         return url;
     }
+
+    public URL generateV4GetObjectSignedUrl(String objectName, int durationMinutes) {
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, objectName))
+                .build();
+
+        URL url = storage.signUrl(
+                blobInfo,
+                durationMinutes, TimeUnit.MINUTES,
+                Storage.SignUrlOption.httpMethod(HttpMethod.GET),
+                Storage.SignUrlOption.withV4Signature()
+        );
+        return url;
+    }
 }

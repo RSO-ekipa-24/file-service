@@ -17,5 +17,7 @@ public class TagResource {
     
     @Inject
     SecurityIdentity securityIdentity;
+
+    
     
 }
