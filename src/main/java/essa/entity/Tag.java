@@ -32,6 +32,11 @@ public class Tag {
     @CreationTimestamp
     private OffsetDateTime created;
 
+    @PrePersist
+    protected void onCreate() {
+        this.created = OffsetDateTime.now();
+    }
+
     public UUID getId() {
         return id;
     }

@@ -2,10 +2,12 @@ package essa.resource.image;
 
 import java.net.URL;
 import java.util.UUID;
+import java.util.List;
 
 import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
-import essa.dto.image.ImageDownloadRequest;
+import essa.dto.image.ImageAddLODRequest;
+import essa.dto.image.PropertyThumbnailsResponse;
 import essa.entity.enums.LevelOfDetail;
 import essa.service.image.ImageService;
 import essa.service.file.FileService;
@@ -36,14 +38,36 @@ public class ImageResource {
         return Response.status(Response.Status.CREATED).entity(response).build();
     }
 
-    @GET
-    @Path("/download")
+    @DELETE
+    @Path("/delete/{id}")
     @RolesAllowed({"user", "admin"})
-    public Response downloadFile(@Valid @NotNull ImageDownloadRequest request) throws Exception {
-        URL downloadUrl = imageService.downloadImage(UUID.fromString(request.getId()), request.getLevelOfDetail());
-        if (downloadUrl == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-        return Response.ok(downloadUrl).build();
-    }    
+    public Response deleteImage(@PathParam("id") String id) throws Exception {
+        imageService.softDeleteImage(UUID.fromString(id));
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
+    @POST
+    @Path("/add-levels-of-detail")
+    @RolesAllowed({"system", "admin"})
+    public Response addLevelsOfDetail(@Valid @NotNull ImageAddLODRequest request) throws Exception {
+        imageService.addLevelOfDetailToImage(request);
+        return Response.status(Response.Status.OK).build();
+    }
+
+    @GET
+    @Path("/download/{id}")
+    public Response downloadFile(@PathParam("id") String id, @QueryParam("levelOfDetail") LevelOfDetail levelOfDetail) throws Exception {
+        URL downloadUrl = imageService.downloadImage(UUID.fromString(id), levelOfDetail);
+        return Response.status(Response.Status.OK).entity(downloadUrl).build();
+    }
+
+    @GET
+    @Path("/thumbnails")
+    @RolesAllowed({"user", "admin"})
+    public Response getThumbnailsForProperties(@QueryParam("propertyId") List<Long> propertyIds) throws Exception {
+        List<PropertyThumbnailsResponse> response = imageService.getThumbnailsForProperties(propertyIds);
+        return Response.status(Response.Status.OK).entity(response).build();
+    }
+
+    // get images of property
 }

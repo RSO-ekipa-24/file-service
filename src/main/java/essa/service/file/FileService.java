@@ -4,21 +4,34 @@ import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
 import essa.dto.file.FileMetadataResponse;
 import essa.entity.File;
+import essa.entity.PropertyFile;
+import essa.entity.Tag;
 import essa.entity.enums.FileStatus;
 import essa.entity.enums.FileType;
+import essa.entity.id.PropertyFileId;
 import essa.repository.file.FileRepository;
-import essa.repository.file.TagRepository;
+import essa.repository.tag.TagRepository;
 import essa.service.gcs.GcsService;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import jakarta.ws.rs.core.Response;
 
 import java.util.UUID;
+import java.util.Set;
+
+import org.checkerframework.checker.units.qual.t;
+
+import com.aayushatharva.brotli4j.common.annotations.Local;
+
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.List;
 
 @ApplicationScoped
 public class FileService {
@@ -74,6 +87,24 @@ public class FileService {
         file.setObjectName(objectName);
         file.setStatus(FileStatus.PENDING);
         file.setOwnerKeycloakId(keycloakId);
+
+        if (request.getPropertyId() != null) {
+            long propertyId;
+            try {
+                propertyId = Long.parseLong(request.getPropertyId());
+            } catch (NumberFormatException e) {
+                throw new WebApplicationException("Invalid propertyId format", Response.Status.BAD_REQUEST);
+            }
+
+            PropertyFileId propertyFileId = new PropertyFileId();
+            propertyFileId.setPropertyId(propertyId);
+            propertyFileId.setFileId(uuid);
+
+            PropertyFile propertyFile = new PropertyFile();
+            propertyFile.setId(propertyFileId);
+
+            file.addPropertyLink(propertyFile);
+        }
         
         fileRepository.persist(file);
         
@@ -85,47 +116,89 @@ public class FileService {
         return response;
     }
 
+    @Transactional 
+    public void softDeleteFile(@NotNull UUID id) throws Exception {
+        File file = findFileWithPermissionCheck(id);
+        file.softDelete();
+    }
 
     @Transactional
-    public boolean confirmUpload(@NotNull UUID id) throws Exception {
+    public void hardDeleteFile(@NotNull UUID id) throws Exception {
+        File file = findFileWithPermissionCheck(id);
+
+        boolean deleted = gcsService.deleteObject(file.getObjectName());
+        if (!deleted) {
+            throw new WebApplicationException("Failed to delete file from storage", Response.Status.INTERNAL_SERVER_ERROR);
+        }
+
+        fileRepository.delete(file);
+    }
+
+    @Transactional
+    public void confirmUpload(@NotNull UUID id) throws Exception {
         File file = fileRepository.findById(id);
         if (file == null)
-            return false;
-        
+            throw new WebApplicationException("File not found", Response.Status.NOT_FOUND);
+
         if (file.getStatus() == FileStatus.AVAILABLE)
-            return true;
+            return;
         
         if (file.getStatus() == FileStatus.PENDING) {
             file.setStatus(FileStatus.AVAILABLE);
-            return true;
+            return;
         }
-    
-        return false;
+
+        throw new WebApplicationException("File upload cannot be confirmed in its current state", Response.Status.BAD_REQUEST);
     }
 
     @Transactional
-    public URL downloadFile(@NotNull UUID id) {
-        File file = fileRepository.findById(id);
-        if (file == null || file.getStatus() != FileStatus.AVAILABLE) {
-            return null;
+    public URL downloadFile(@NotNull UUID id) throws Exception {
+        File file = findFileWithPermissionCheck(id);
+
+        if (file.getStatus() != FileStatus.AVAILABLE) {
+            throw new WebApplicationException("File not available", Response.Status.NOT_FOUND);
         }
         int durationMinutes = 5;
-        return gcsService.generateV4GetObjectSignedUrl(file.getObjectName(), durationMinutes);
+        URL downloadUrl = gcsService.generateV4GetObjectSignedUrl(file.getObjectName(), durationMinutes);
+        if (downloadUrl == null) {
+            throw new WebApplicationException("Failed to generate download URL", Response.Status.INTERNAL_SERVER_ERROR);
+        }
+        
+        return downloadUrl; 
     }
 
     @Transactional
-    public FileMetadataResponse getFileMetadata(@NotNull UUID id) {
+    public FileMetadataResponse getFileMetadata(@NotNull UUID id) throws Exception {
+        File file = findFileWithPermissionCheck(id);
+        if (file == null) {
+            throw new WebApplicationException("File not found", Response.Status.NOT_FOUND);
+        }
+
+        FileMetadataResponse response = new FileMetadataResponse();
+        response.setId(file.getId());
+        response.setFileName(file.getFileName());
+        response.setContentType(file.getContentType());
+        response.setFileSize(file.getFileSize());
+        response.setDateUploaded(file.getCreated().toLocalDateTime());
+        response.setDateModified(file.getModified().toLocalDateTime());
+        response.setStatus(file.getStatus());
+        Set<Tag> tags = file.getTags();
+        List<String> tagNames = tags.stream().map(tag -> tag.getTagName()).toList();
+        response.setTags(tagNames);
+
+        return response;
+    }
+
+    @Transactional
+    public File findFileWithPermissionCheck(UUID id) throws Exception {
+        String keycloakId = securityIdentity.getPrincipal().getName();
         File file = fileRepository.findById(id);
         if (file == null) {
-            return null;
+            throw new WebApplicationException("File not found", Response.Status.NOT_FOUND);
         }
-        return new FileMetadataResponse(
-                file.getId(),
-                file.getFileName(),
-                file.getContentType(),
-                file.getFileSize(),
-                file.getCreated().toLocalDateTime(),
-                file.getModified().toLocalDateTime()
-        );
+        if (!file.getOwnerKeycloakId().equals(keycloakId)) {
+            throw new WebApplicationException("Forbidden", Response.Status.FORBIDDEN);
+        }
+        return file;
     }
 }

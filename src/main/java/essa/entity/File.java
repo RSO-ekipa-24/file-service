@@ -54,7 +54,7 @@ public class File {
     @Column(name = "modified", nullable = false)
     private OffsetDateTime modified;
 
-    /** Image variants (only for IMAGE files) */
+    /** Image levels of detail (only for IMAGE files) */
     @OneToMany(mappedBy = "file", cascade = CascadeType.ALL, orphanRemoval = true)
     public Set<ImageLevelOfDetail> imageLOD = new HashSet<>();
 
@@ -79,6 +79,11 @@ public class File {
 
     @PreUpdate
     protected void onUpdate() {
+        this.modified = OffsetDateTime.now();
+    }
+
+    public void softDelete() {
+        this.status = FileStatus.DELETED;
         this.modified = OffsetDateTime.now();
     }
 
@@ -168,5 +173,36 @@ public class File {
 
     public void setModified(OffsetDateTime modified) {
         this.modified = modified;
+    }
+
+    public Set<ImageLevelOfDetail> getImageLOD() {
+        return imageLOD;
+    }
+
+    public void addImageLOD(ImageLevelOfDetail imageLevelOfDetail) {
+        imageLOD.add(imageLevelOfDetail);
+        imageLevelOfDetail.setFile(this);
+    }
+
+    public Set<Tag> getTags() {
+        return tags;
+    }
+
+    public Set<FileAccess> getAccessEntries() {
+        return accessEntries;
+    }
+
+    public void addAccessEntry(FileAccess fileAccess) {
+        accessEntries.add(fileAccess);
+        fileAccess.setFile(this);
+    }
+
+    public Set<PropertyFile> getPropertyLinks() {
+        return propertyLinks;
+    }
+
+    public void addPropertyLink(PropertyFile propertyFile) {
+        propertyLinks.add(propertyFile);
+        propertyFile.setFile(this);
     }
 }

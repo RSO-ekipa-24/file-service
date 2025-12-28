@@ -18,6 +18,8 @@ public class FileUploadRequest {
     @Max(value = 1073741824, message = "Size must be less than or equal to 1GB")
     private Long size; // in bytes
 
+    private String propertyId;
+
     private String[] tagNames;
     
     public FileUploadRequest() {}
@@ -52,6 +54,14 @@ public class FileUploadRequest {
 
     public void setSize(Long size) {
         this.size = size;
+    }
+
+    public String getPropertyId() {
+        return propertyId;
+    }
+
+    public void setPropertyId(String propertyId) {
+        this.propertyId = propertyId;
     }
     
     public String[] getTagNames() {

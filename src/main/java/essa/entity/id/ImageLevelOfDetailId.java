@@ -43,10 +43,8 @@ public class ImageLevelOfDetailId implements Serializable {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((fileId == null) ? 0 : fileId.hashCode());
-        result = prime * result + ((levelOfDetail == null) ? 0 : levelOfDetail.hashCode());
+        int result = ((fileId == null) ? 0 : fileId.hashCode());
+        result = 113 * result + ((levelOfDetail == null) ? 0 : levelOfDetail.hashCode());
         return result;
     }
 

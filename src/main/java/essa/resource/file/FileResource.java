@@ -33,14 +33,19 @@ public class FileResource {
         return Response.status(Response.Status.CREATED).entity(response).build();
     }
 
+    @DELETE
+    @Path("/delete/{id}")
+    @RolesAllowed({"user", "admin"})
+    public Response deleteFile(@PathParam("id") String id) throws Exception {
+        fileService.softDeleteFile(UUID.fromString(id));
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
     @PUT
     @Path("/confirm/{id}")
     @RolesAllowed({"system", "admin"})
     public Response confirmUpload(@PathParam("id") String id) throws Exception {
-        boolean success = fileService.confirmUpload(UUID.fromString(id));
-        if (!success) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
+        fileService.confirmUpload(UUID.fromString(id));
         return Response.ok().build();
     }
 
@@ -49,9 +54,6 @@ public class FileResource {
     @RolesAllowed({"user", "admin"})
     public Response downloadFile(@PathParam("id") String id) throws Exception {
         URL downloadUrl = fileService.downloadFile(UUID.fromString(id));
-        if (downloadUrl == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
         return Response.ok(downloadUrl).build();
     }
 
@@ -60,9 +62,6 @@ public class FileResource {
     @RolesAllowed({"user", "admin"})
     public Response getFileMetadata(@PathParam("id") String id) throws Exception {
         FileMetadataResponse response = fileService.getFileMetadata(UUID.fromString(id));
-        if (response == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
         return Response.ok(response).build();
     }
 }

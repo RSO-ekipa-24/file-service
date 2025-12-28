@@ -87,4 +87,9 @@ public class GcsService {
         );
         return url;
     }
+
+    public boolean deleteObject(String objectName) {
+        BlobId blobId = BlobId.of(bucketName, objectName);
+        return storage.delete(blobId);
+    }
 }
