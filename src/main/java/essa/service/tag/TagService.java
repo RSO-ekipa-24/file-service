@@ -67,9 +67,9 @@ public class TagService {
 
         TagGetResponse response = new TagGetResponse();
 
-        List<String> systemTags = tagRepository.listSystemTagsForFileType(fileType.name().toLowerCase());
+        List<String> systemTags = tagRepository.listSystemTagsForFileType(fileType);
 
-        List<String> userTags = tagRepository.listUserTagsForFileType(fileType.name().toLowerCase(), keycloakId);
+        List<String> userTags = tagRepository.listUserTagsForFileType(fileType, keycloakId);
 
         response.setSystemTags(systemTags);
         response.setUserTags(userTags);

@@ -53,6 +53,10 @@ You can then execute your native executable with: `./target/core-1.0.0-SNAPSHOT-
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
 
+## Environmental variables
+
+Create ``.env`` file with environmental varaibles. Follow ``.env.example``.
+
 ## Building Docker image
 
 Docker image can be built with:
@@ -60,6 +64,40 @@ Docker image can be built with:
 ```shell script
 docker build -t file-service:latest -f .\src\main\docker\Dockerfile.jvm .
 ```
+
+## Google Cloud Setup
+
+Current implementation works with Google Cloud and uses Google Cloud Storage to save files.
+
+### Prerequisites
+- gcloud CLI
+- gsutil
+- Authenticated via `gcloud auth login`
+- Set project with  `gcloud config set project $GCP_PROJECT_ID`
+
+### Service account
+
+For deployment service account is required. If it does not exist generate with
+
+```bash
+gcloud iam service-accounts create file-service --display-name "File Service"
+```
+
+For local development authenticate with 
+
+```bash
+gcloud auth application-default login
+```
+
+and grant your user account permission to impersonate the service account
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding file-service@artful-reactor-351917.iam.gserviceaccount.com --member="user:$(gcloud config get-value account)" --role="roles/iam.serviceAccountTokenCreator"
+```
+
+### Bucket setup
+
+Service uses two buckets, one for private and one for public data. Buckets can be set up with Python script ``scripts/setup-gcs.py``
 
 ## Related Guides
 

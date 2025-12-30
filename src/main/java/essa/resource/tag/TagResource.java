@@ -15,7 +15,6 @@ import java.util.UUID;
 
 @Path("/tag")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public class TagResource {
     
     @Inject
@@ -27,6 +26,7 @@ public class TagResource {
     @POST
     @Path("/create")
     @RolesAllowed({"user", "admin"})
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response createTag(TagCreateRequest request) throws Exception {
         tagService.createTag(request);
         return Response.status(Response.Status.CREATED).build();
@@ -71,8 +71,4 @@ public class TagResource {
         tagService.removeTagFromFile(UUID.fromString(tagId), UUID.fromString(fileId));
         return Response.status(Response.Status.NO_CONTENT).build();
     }
-
-    
-
-
 }

@@ -4,6 +4,7 @@ import essa.dto.file.FileUploadResponse;
 
 import java.util.UUID;
 import java.net.URL;
+import java.util.List;
 
 import essa.dto.file.FileUploadRequest;
 import essa.service.file.FileService;
@@ -19,7 +20,6 @@ import jakarta.ws.rs.core.Response;
 
 @Path("/file")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public class FileResource {
 
     @Inject
@@ -28,6 +28,7 @@ public class FileResource {
     @POST
     @Path("/upload")
     @RolesAllowed({"user", "admin"})
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response uploadFile(@Valid @NotNull FileUploadRequest request) throws Exception {
         FileUploadResponse response = fileService.uploadFile(request);
         return Response.status(Response.Status.CREATED).entity(response).build();
@@ -37,8 +38,24 @@ public class FileResource {
     @Path("/delete/{id}")
     @RolesAllowed({"user", "admin"})
     public Response deleteFile(@PathParam("id") String id) throws Exception {
-        fileService.softDeleteFile(UUID.fromString(id));
+        fileService.deleteFile(UUID.fromString(id));
         return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
+    @GET
+    @Path("/deleted")
+    @RolesAllowed({"user", "admin"})
+    public Response getDeletedFiles() throws Exception {
+        List<FileMetadataResponse> deletedFiles = fileService.getDeletedFiles();
+        return Response.status(Response.Status.OK).entity(deletedFiles).build();
+    }
+
+    @POST
+    @Path("/restore/{id}")
+    @RolesAllowed({"user", "admin"})
+    public Response restoreFile(@PathParam("id") String id) throws Exception {
+        fileService.restoreFile(UUID.fromString(id));
+        return Response.status(Response.Status.OK).build();
     }
 
     @PUT

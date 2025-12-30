@@ -3,6 +3,7 @@ package essa.service.image;
 import java.net.URL;
 import java.util.UUID;
 import java.util.List;
+import java.util.ArrayList;
 
 import com.google.apps.card.v1.Image;
 
@@ -10,8 +11,12 @@ import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
 import essa.dto.image.ImageAddLODRequest;
 import essa.dto.image.PropertyThumbnailsResponse;
+import essa.dto.image.ImagePreviewResponse;
+import essa.dto.image.ImagePreviewQuery;
 import essa.entity.ImageLevelOfDetail;
 import essa.entity.enums.LevelOfDetail;
+import essa.entity.enums.FileStatus;
+import essa.entity.enums.FileType;
 import essa.entity.File;
 import essa.repository.image.ImageRepository;
 import essa.repository.tag.TagRepository;
@@ -53,16 +58,13 @@ public class ImageService {
     private static final String IMAGE_ROOT = "images";
 
     private String generateObjectName(String keycloakId, String lod, UUID uuid, String fileName) {
-        StringBuilder builder = new StringBuilder(IMAGE_ROOT);
-        builder.append("/");
-        builder.append(keycloakId);
-        builder.append("/");
-        builder.append(lod);
-        builder.append("/");
-        builder.append(uuid.toString());
-        builder.append("-");
-        builder.append(fileName);
-        return builder.toString();
+        String objectName = String.format("%s/%s/%s/%s-%s", 
+            IMAGE_ROOT, keycloakId, lod, uuid.toString(), fileName);
+        return objectName;
+    }
+
+    private boolean isImageContentType(String contentType) {
+        return contentType != null && contentType.startsWith("image/");
     }
 
     @Transactional
@@ -70,14 +72,15 @@ public class ImageService {
         String keycloakId = securityIdentity.getPrincipal().getName();
         UUID uuid = UUID.randomUUID();
 
-        String objectName = generateObjectName(keycloakId, null, uuid, request.getFileName());
-        
-        return fileService.handleFileUpload(keycloakId, uuid, objectName, request);
-    }
+        if (isImageContentType(request.getContentType()) == false) {
+            throw new WebApplicationException("Invalid content type, file is not an image", Response.Status.BAD_REQUEST);
+        }
 
-    @Transactional
-    public void softDeleteImage(@NotNull UUID id) throws Exception {
-        fileService.softDeleteFile(id);
+        String bucketName = gcsService.getPublicBucketName();
+        String objectName = generateObjectName(keycloakId, null, uuid, request.getFileName());
+
+        
+        return fileService.handleFileUpload(keycloakId, uuid, bucketName, objectName, request);
     }
 
     @Transactional
@@ -92,13 +95,13 @@ public class ImageService {
             throw new WebApplicationException("Forbidden", Response.Status.FORBIDDEN);
         }
 
-        boolean deleted = gcsService.deleteObject(file.getObjectName());
+        boolean deleted = gcsService.deleteObject(file.getBucketName(), file.getObjectName());
         if (!deleted) {
             throw new WebApplicationException("Failed to delete image from storage", Response.Status.INTERNAL_SERVER_ERROR);
         }
 
         imageRepository.getAllImageLODsByFileId(id).forEach(lod -> {
-            boolean deletedLOD = gcsService.deleteObject(lod.getObjectName());
+            boolean deletedLOD = gcsService.deleteObject(file.getBucketName(), lod.getObjectName());
             if (!deletedLOD) {
                 throw new WebApplicationException("Failed to delete image LOD from storage", Response.Status.INTERNAL_SERVER_ERROR);
             }
@@ -135,23 +138,24 @@ public class ImageService {
     }
 
     @Transactional
-    public URL downloadImage(@NotNull UUID id, LevelOfDetail levelOfDetail) throws Exception {
-        int durationMinutes = 5;
+    public URL downloadImage(@NotNull UUID id, LevelOfDetail levelOfDetail) throws Exception {        
+        File file = fileRepository.findById(id);
+        if (file == null || file.getFileType() != FileType.IMAGE) {
+            throw new WebApplicationException("Image not found", Response.Status.NOT_FOUND);
+        }
+        if (file.getStatus() != FileStatus.AVAILABLE) {
+            throw new WebApplicationException("Image is not available", Response.Status.GONE);
+        }
         
         if (levelOfDetail == null) {
-            File file = fileRepository.findById(id);
-            if (file == null) {
-                throw new WebApplicationException("Image not found", Response.Status.NOT_FOUND);
-            }
-            return gcsService.generateV4GetObjectSignedUrl(file.getObjectName(), durationMinutes);
-
+            return gcsService.generatePublicObjectUrl(file.getBucketName(), file.getObjectName());
         }
         
         ImageLevelOfDetail imageLOD = imageRepository.findByIdAndLOD(id, levelOfDetail);
         if (imageLOD == null) {
             throw new WebApplicationException("Level of detail does not exist", Response.Status.NOT_FOUND);
         }
-        return gcsService.generateV4GetObjectSignedUrl(imageLOD.getObjectName(), durationMinutes);
+        return gcsService.generatePublicObjectUrl(imageLOD.getFile().getBucketName(), imageLOD.getObjectName());
     }
 
     @Transactional
@@ -160,5 +164,27 @@ public class ImageService {
         return results;
     }
 
-    // TODO get images of property
+    @Transactional
+    public List<ImagePreviewResponse> getImagesForProperty(@NotNull Long propertyId) throws Exception {
+        List<ImagePreviewQuery> imageData = imageRepository.findImagePreviewDataForProperty(propertyId);
+
+        if (imageData.isEmpty()) {
+            throw new WebApplicationException("No images found for property", Response.Status.NOT_FOUND);
+        }
+
+        List<ImagePreviewResponse> responseList = new ArrayList<>();
+        for (ImagePreviewQuery data : imageData) {
+            URL downloadUrl = gcsService.generatePublicObjectUrl(data.getBucketName(), data.getObjectName());
+            ImagePreviewResponse response = new ImagePreviewResponse();
+            response.setId(data.getId());
+            response.setPreviewUrl(downloadUrl);
+            response.setTags(data.getTags());
+
+            responseList.add(response);
+        }
+
+
+        return responseList;
+    }
+
 }

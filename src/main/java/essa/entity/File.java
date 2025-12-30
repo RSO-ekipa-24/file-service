@@ -87,6 +87,11 @@ public class File {
         this.modified = OffsetDateTime.now();
     }
 
+    public void restore() {
+        this.status = FileStatus.AVAILABLE;
+        this.modified = OffsetDateTime.now();
+    }
+
     public UUID getId() {
         return id;
     }

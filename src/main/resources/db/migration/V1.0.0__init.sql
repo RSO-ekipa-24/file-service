@@ -49,7 +49,7 @@ CREATE TABLE tag (
 
     created TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    CONSTRAINT uq_tag_name_owner UNIQUE (tag_name, owner_keycloak_id)
+    CONSTRAINT uq_tag_name_owner_file_type UNIQUE (tag_name, owner_keycloak_id, file_type)
 );
 
 CREATE TABLE file_tag (

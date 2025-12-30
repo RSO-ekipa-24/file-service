@@ -8,6 +8,7 @@ import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
 import essa.dto.image.ImageAddLODRequest;
 import essa.dto.image.PropertyThumbnailsResponse;
+import essa.dto.image.ImagePreviewResponse;
 import essa.entity.enums.LevelOfDetail;
 import essa.service.image.ImageService;
 import essa.service.file.FileService;
@@ -21,7 +22,6 @@ import jakarta.ws.rs.core.Response;
 
 @Path("/image")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 public class ImageResource {
     
     @Inject
@@ -33,6 +33,7 @@ public class ImageResource {
     @POST
     @Path("/upload")
     @RolesAllowed({"user", "admin"})
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response uploadImage(@Valid @NotNull FileUploadRequest request) throws Exception {
         FileUploadResponse response = imageService.uploadImage(request);
         return Response.status(Response.Status.CREATED).entity(response).build();
@@ -42,13 +43,14 @@ public class ImageResource {
     @Path("/delete/{id}")
     @RolesAllowed({"user", "admin"})
     public Response deleteImage(@PathParam("id") String id) throws Exception {
-        imageService.softDeleteImage(UUID.fromString(id));
+        imageService.hardDeleteImage(UUID.fromString(id));
         return Response.status(Response.Status.NO_CONTENT).build();
     }
 
     @POST
     @Path("/add-levels-of-detail")
     @RolesAllowed({"system", "admin"})
+    @Consumes(MediaType.APPLICATION_JSON)
     public Response addLevelsOfDetail(@Valid @NotNull ImageAddLODRequest request) throws Exception {
         imageService.addLevelOfDetailToImage(request);
         return Response.status(Response.Status.OK).build();
@@ -56,7 +58,7 @@ public class ImageResource {
 
     @GET
     @Path("/download/{id}")
-    public Response downloadFile(@PathParam("id") String id, @QueryParam("levelOfDetail") LevelOfDetail levelOfDetail) throws Exception {
+    public Response downloadFile(@PathParam("id") String id, @QueryParam("lod") LevelOfDetail levelOfDetail) throws Exception {
         URL downloadUrl = imageService.downloadImage(UUID.fromString(id), levelOfDetail);
         return Response.status(Response.Status.OK).entity(downloadUrl).build();
     }
@@ -69,5 +71,11 @@ public class ImageResource {
         return Response.status(Response.Status.OK).entity(response).build();
     }
 
-    // get images of property
-}
+    @GET
+    @Path("/property/{propertyId}")
+    public Response getImagesForProperty(@PathParam("propertyId") Long propertyId) throws Exception {
+        List<ImagePreviewResponse> imageIds = imageService.getImagesForProperty(propertyId);
+        return Response.status(Response.Status.OK).entity(imageIds).build();
+    }
+    
+} 

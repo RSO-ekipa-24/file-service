@@ -24,13 +24,8 @@ import jakarta.ws.rs.core.Response;
 import java.util.UUID;
 import java.util.Set;
 
-import org.checkerframework.checker.units.qual.t;
-
-import com.aayushatharva.brotli4j.common.annotations.Local;
-
 import java.net.URL;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.List;
 
 @ApplicationScoped
@@ -51,14 +46,9 @@ public class FileService {
     private static final String FILE_ROOT = "files";
 
     private String generateObjectName(String keycloakId, UUID uuid, String fileName) {
-        StringBuilder builder = new StringBuilder(FILE_ROOT);
-        builder.append("/");
-        builder.append(keycloakId);
-        builder.append("/");
-        builder.append(uuid.toString());
-        builder.append("-");
-        builder.append(fileName);
-        return builder.toString();
+        String objectName = String.format("%s/%s/%s-%s", 
+            FILE_ROOT, keycloakId, uuid.toString(), fileName);
+        return objectName;
     }
 
     @Transactional
@@ -66,15 +56,16 @@ public class FileService {
         String keycloakId = securityIdentity.getPrincipal().getName();
         UUID uuid = UUID.randomUUID();
 
+        String bucketName = gcsService.getPrivateBucketName();
         String objectName = generateObjectName(keycloakId, uuid, request.getFileName());
 
-        return handleFileUpload(keycloakId, uuid, objectName, request);
+        return handleFileUpload(keycloakId, uuid, bucketName, objectName, request);
     }
 
     @Transactional
-    public FileUploadResponse handleFileUpload(String keycloakId, UUID uuid, String objectName, FileUploadRequest request) throws Exception {
+    public FileUploadResponse handleFileUpload(String keycloakId, UUID uuid, String bucketName,String objectName, FileUploadRequest request) throws Exception {
         int durationMinutes = 5;
-        URL gcsUploadSignedUrl = gcsService.generateV4PutObjectSignedUrl(objectName, request.getContentType(), durationMinutes);
+        URL gcsUploadSignedUrl = gcsService.generateV4PutObjectSignedUrl(bucketName, objectName, request.getContentType(), durationMinutes);
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(durationMinutes);
         
         File file = new File();
@@ -83,7 +74,7 @@ public class FileService {
         file.setContentType(request.getContentType());
         file.setFileType(FileType.FILE);
         file.setFileSize(request.getSize());
-        file.setBucketName(gcsService.getBucketName());
+        file.setBucketName(bucketName);
         file.setObjectName(objectName);
         file.setStatus(FileStatus.PENDING);
         file.setOwnerKeycloakId(keycloakId);
@@ -116,22 +107,22 @@ public class FileService {
         return response;
     }
 
-    @Transactional 
-    public void softDeleteFile(@NotNull UUID id) throws Exception {
-        File file = findFileWithPermissionCheck(id);
-        file.softDelete();
-    }
-
     @Transactional
-    public void hardDeleteFile(@NotNull UUID id) throws Exception {
+    public void deleteFile(@NotNull UUID id) throws Exception {
         File file = findFileWithPermissionCheck(id);
 
-        boolean deleted = gcsService.deleteObject(file.getObjectName());
+        // GCS has soft delete enabled - file persists for GCP_RETENTION_DAYS before permanent deletion
+        boolean deleted = gcsService.deleteObject(file.getBucketName(), file.getObjectName());
         if (!deleted) {
             throw new WebApplicationException("Failed to delete file from storage", Response.Status.INTERNAL_SERVER_ERROR);
         }
 
-        fileRepository.delete(file);
+        file.softDelete();
+    }
+
+    @Transactional
+    public void hardDeleteFile(UUID id) {
+        fileRepository.deleteById(id);
     }
 
     @Transactional
@@ -159,7 +150,7 @@ public class FileService {
             throw new WebApplicationException("File not available", Response.Status.NOT_FOUND);
         }
         int durationMinutes = 5;
-        URL downloadUrl = gcsService.generateV4GetObjectSignedUrl(file.getObjectName(), durationMinutes);
+        URL downloadUrl = gcsService.generateV4GetObjectSignedUrl(file.getBucketName(),file.getObjectName(), durationMinutes);
         if (downloadUrl == null) {
             throw new WebApplicationException("Failed to generate download URL", Response.Status.INTERNAL_SERVER_ERROR);
         }
@@ -200,5 +191,36 @@ public class FileService {
             throw new WebApplicationException("Forbidden", Response.Status.FORBIDDEN);
         }
         return file;
+    }
+
+    @Transactional
+    public List<FileMetadataResponse> getDeletedFiles() throws Exception {
+        String keycloakId = securityIdentity.getPrincipal().getName();
+        List<File> deletedFiles = fileRepository.findDeletedFilesByOwner(keycloakId);
+
+        List<FileMetadataResponse> responseList = deletedFiles.stream().map(file -> {
+            FileMetadataResponse response = new FileMetadataResponse();
+            response.setId(file.getId());
+            response.setFileName(file.getFileName());
+            response.setContentType(file.getContentType());
+            response.setFileSize(file.getFileSize());
+            response.setDateUploaded(file.getCreated().toLocalDateTime());
+            response.setDateModified(file.getModified().toLocalDateTime());
+            response.setStatus(file.getStatus());
+            return response;
+        }).toList();
+
+        return responseList;
+    }
+
+    @Transactional
+    public void restoreFile(@NotNull UUID id) throws Exception {
+        File file = findFileWithPermissionCheck(id);
+        if (file.getStatus() != FileStatus.DELETED) {
+            throw new WebApplicationException("File is not deleted", Response.Status.BAD_REQUEST);
+        }
+
+        gcsService.restoreDeletedObject(file.getBucketName(), file.getObjectName());
+        file.restore();
     }
 }

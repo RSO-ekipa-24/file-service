@@ -7,6 +7,7 @@ import org.jboss.resteasy.annotations.Query;
 
 import essa.entity.enums.LevelOfDetail;
 import essa.dto.image.PropertyThumbnailsResponse;
+import essa.dto.image.ImagePreviewQuery;
 import essa.entity.ImageLevelOfDetail;
 import essa.entity.id.ImageLevelOfDetailId;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -54,5 +55,29 @@ public class ImageRepository {
         return em.createQuery(query, ImageLevelOfDetail.class)
           .setParameter("fileId", fileId)
           .getResultList();
+    }
+
+    @Transactional 
+    public List<ImagePreviewQuery> findImagePreviewDataForProperty(Long propertyId) {
+        String query = """
+            SELECT new essa.dto.image.ImagePreviewQuery(
+                f.id,
+                f.bucketName,
+                i.objectName,
+                CAST(collect(DISTINCT t.tagName) AS list)
+            )
+            FROM File f
+            JOIN f.propertyLinks pf
+            JOIN f.imageLOD i
+            LEFT JOIN f.tags t
+            WHERE pf.id.propertyId = :propertyId
+            AND f.fileType = :fileType
+            AND i.id.levelOfDetail = :lod
+            GROUP BY f.id, i.objectName
+        """;
+        List<ImagePreviewQuery> results = em.createQuery(query, ImagePreviewQuery.class)
+            .setParameter("propertyId", propertyId)
+            .getResultList();
+        return results;
     }
 }

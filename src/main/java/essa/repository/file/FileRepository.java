@@ -8,7 +8,6 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -48,5 +47,22 @@ public class FileRepository {
         } else {
             em.remove(em.merge(file));
         }
+    }
+
+    @Transactional
+    public void deleteById(@NotNull UUID id) {
+        File file = findById(id);
+        if (file != null) {
+            delete(file);
+        }
+    }
+
+    @Transactional
+    public List<File> findDeletedFilesByOwner(String ownerId) {
+        String query = "SELECT f FROM File f WHERE f.ownerId = :ownerId AND f.status = :status";
+        return em.createQuery(query, File.class)
+                .setParameter("ownerId", ownerId)
+                .setParameter("status", essa.entity.enums.FileStatus.DELETED)
+                .getResultList();
     }
 }

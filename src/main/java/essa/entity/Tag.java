@@ -10,12 +10,14 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tag")
+@Table(
+    name = "tag", 
+    uniqueConstraints = {@UniqueConstraint(columnNames = {"tag_name", "owner_keycloak_id", "file_type"})}
+)
 public class Tag {
 
     @Id
-    @GeneratedValue
-    @Column(columnDefinition = "uuid")
+    @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
     @Column(name = "tag_name", nullable = false)

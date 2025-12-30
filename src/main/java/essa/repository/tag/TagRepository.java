@@ -1,6 +1,7 @@
 package essa.repository.tag;
 
 import essa.entity.Tag;
+import essa.entity.enums.FileType;
 import io.smallrye.common.constraint.NotNull;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
@@ -41,8 +42,8 @@ public class TagRepository {
     }
     
     @Transactional
-    public List<String> listSystemTagsForFileType(@NotNull String fileType) {
-        String query = "SELECT t.tagName FROM Tag t WHERE t.ownerKeycloakId = 'null' AND t.fileType = :fileType";
+    public List<String> listSystemTagsForFileType(@NotNull FileType fileType) {
+        String query = "SELECT t.tagName FROM Tag t WHERE t.ownerKeycloakId is NULL AND t.fileType = :fileType";
         return em.createQuery(query, String.class)
                  .setParameter("fileType", fileType)
                  .getResultList();
@@ -50,7 +51,7 @@ public class TagRepository {
     }
 
     @Transactional
-    public List<String> listUserTagsForFileType(@NotNull String fileType, @NotNull String ownerKeycloak) {
+    public List<String> listUserTagsForFileType(@NotNull FileType fileType, @NotNull String ownerKeycloak) {
         String query = "SELECT t.tagName FROM Tag t WHERE t.ownerKeycloakId = :ownerKeycloakId AND t.fileType = :fileType";
         return em.createQuery(query, String.class)
                  .setParameter("fileType", fileType)
