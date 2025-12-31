@@ -4,6 +4,10 @@ This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
 
+## Environment
+
+Set environmental variables in ``.env`` file. Follow ``.env.example``.
+
 ## Running the application in dev mode
 
 You can run your application in dev mode that enables live coding using:
@@ -62,7 +66,7 @@ Create ``.env`` file with environmental varaibles. Follow ``.env.example``.
 Docker image can be built with:
 
 ```shell script
-docker build -t file-service:latest -f .\src\main\docker\Dockerfile.jvm .
+docker build -t file-service:latest -f ./src/main/docker/Dockerfile.jvm .
 ```
 
 ## Google Cloud Setup
