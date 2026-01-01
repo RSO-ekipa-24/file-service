@@ -12,6 +12,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.annotation.security.RolesAllowed;
 
 import java.util.UUID;
+import java.util.List;
 
 @Path("/tag")
 @Produces(MediaType.APPLICATION_JSON)
@@ -45,6 +46,14 @@ public class TagResource {
     @RolesAllowed({"user", "admin"})
     public Response getImageTags() throws Exception {
         TagGetResponse response = tagService.getImageTags();
+        return Response.status(Response.Status.OK).entity(response).build();
+    }
+
+    @GET
+    @Path("/image-system")
+    @RolesAllowed({"system", "admin"})
+    public Response getImageSystemTags() throws Exception {
+        List<String> response = tagService.getImageSystemTags();
         return Response.status(Response.Status.OK).entity(response).build();
     }
     

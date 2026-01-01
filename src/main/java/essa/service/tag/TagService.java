@@ -88,6 +88,11 @@ public class TagService {
     }
 
     @Transactional
+    public List<String> getImageSystemTags() throws Exception {
+        return tagRepository.listSystemTagsForFileType(FileType.IMAGE);
+    }
+
+    @Transactional
     public void addTagToFile(UUID tagId, UUID fileId) {
         String keycloakId = securityIdentity.getPrincipal().getName();
 
