@@ -1,0 +1,43 @@
+files:
+
+  deployment:
+    replicaCount: 1
+    name: files-service
+
+    image:
+      repository: europe-central2-docker.pkg.dev/artful-reactor-351917/essa-images/files-service
+      tag: "latest"
+      pullPolicy: IfNotPresent
+      containerPort: 6868
+
+  postgres:
+    name: files-db
+    image: postgres:16
+    service:
+      port: 5432
+    db:
+      databaseName: files_db
+      username: files_user
+      databaseUrl: "jdbc:postgresql://files-db:5432/files_db"
+
+    persistence:
+      enabled: true
+      storage: 5Gi
+      accessMode: ReadWriteOnce
+      mountPath: /var/lib/postgresql/data
+      subPath: pgdata
+
+  service:
+    serviceName: files-service
+    type: ClusterIP
+    port: 8080
+    targetPort: 6868
+
+  secrets:
+    name: files-secrets
+    dbPasswordKey: FILES_DB_PASSWORD
+    keycloakClientSecret: KEYCLOAK_CLIENT_SECRET
+    gcpProjectId: GCP_PROJECT_ID
+    gcpPrivateBucket: GCP_PRIVATE_BUCKET
+    gcpPublicBucket: GCP_PUBLIC_BUCKET
+    gcpServiceAccount: GCP_SERVICE_ACCOUNT

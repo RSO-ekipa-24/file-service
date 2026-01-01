@@ -45,3 +45,5 @@ secrets/*
 # TLS Certificates
 .certs/
 
+*-secrets.yaml
+
