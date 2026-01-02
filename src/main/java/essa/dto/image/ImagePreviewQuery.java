@@ -1,11 +1,12 @@
 package essa.dto.image;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 public class ImagePreviewQuery {
+
     private UUID id;
     private String bucketName;
     private String objectName;
@@ -15,7 +16,7 @@ public class ImagePreviewQuery {
             UUID id,
             String bucketName,
             String objectName,
-            Set<String> tags
+            Collection<String> tags
     ) {
         this.id = id;
         this.bucketName = bucketName;
