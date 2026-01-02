@@ -1,15 +1,11 @@
-import functions_framework
 import requests
 import os
 import logging
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 KC_TOKEN_URL = os.getenv("KC_TOKEN_URL")
 KC_CLIENT_ID = os.getenv("KC_CLIENT_ID")
 KC_CLIENT_SECRET = os.getenv("KC_CLIENT_SECRET")
-CONFIRM_BASE_URL = os.getenv("CONFIRM_BASE_URL")
+CONFIRM_FILE_SERVICE_URL = os.getenv("CONFIRM_FILE_SERVICE_URL")
 
 def get_token():
     """Fetch access token from Keycloak using client credentials."""
@@ -24,7 +20,7 @@ def get_token():
         res.raise_for_status()
         return res.json()["access_token"]
     except requests.exceptions.RequestException as e:
-        logger.error(f"Token fetch failed: {e}")
+        logging.error(f"Token fetch failed: {e}")
         raise
 
 def extract_uuid(name):
@@ -41,36 +37,30 @@ def extract_uuid(name):
     uuid = name[0:uuid_end_index]
     return uuid
 
-@functions_framework.cloud_event
-def on_finalize(cloud_event):
+def on_object_finalize(event, context):
     """Triggered by GCS object finalized event."""
-    data = cloud_event.data
-    bucket = data.get("bucket")
-    name = data.get("name")
+    bucket = event['bucket']
+    object_name = event['name']
     
-    logger.info(f"Processing file: {bucket}/{name}")
-    
-    uuid = extract_uuid(name)
+    uuid = extract_uuid(object_name)
     if not uuid:
-        logger.warning(f"No UUID found in object name: {name}")
+        logging.warning(f"No UUID found in object name: {object_name}")
         return
     
     try:
         token = get_token()
-        url = f"{CONFIRM_BASE_URL}/{uuid}"
+        url = f"{CONFIRM_FILE_SERVICE_URL}/{uuid}"
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
         
-        logger.info(f"Calling: {url}")
         res = requests.post(url, headers=headers, timeout=10)
         res.raise_for_status()
         
-        logger.info(f"File {uuid} confirmed successfully")
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error confirming file: {e}")
+        logging.error(f"Error confirming file: {e}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logging.error(f"Unexpected error: {e}")
         raise
