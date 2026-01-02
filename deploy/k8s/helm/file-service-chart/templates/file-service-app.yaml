@@ -1,0 +1,112 @@
+# Files app deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.files.service.serviceName }}
+  annotations:
+    cloud.google.com/backend-config: '{"default": "files-backend-config"}'
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  selector:
+    app: {{ .Values.files.service.serviceName }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.files.service.port }}
+      targetPort: {{ .Values.files.service.targetPort }}
+  type: {{ .Values.files.service.type }}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.files.deployment.name }}
+spec:
+  replicas: {{ .Values.files.deployment.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.files.deployment.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.files.deployment.name }}
+    spec:
+      serviceAccountName: files-service-ksa
+      containers:
+        - name: {{ .Values.files.deployment.name }}
+          image: "{{ .Values.files.deployment.image.repository }}:{{ .Values.files.deployment.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.files.deployment.image.containerPort }}
+          env:
+            - name: DB_JDBC_URL
+              value: {{ .Values.files.postgres.db.databaseUrl }}
+
+            - name: DB_USERNAME
+              value: {{ .Values.files.postgres.db.username }}
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.files.secrets.name }}
+                  key: {{ .Values.files.secrets.dbPasswordKey }}
+
+            # Internal URL for Backend-to-Backend communication
+            - name: QUARKUS_OIDC_AUTH_SERVER_URL
+              value: "https://keycloak.myproperty-essa.com/realms/quarkus"
+
+            # Must match the Client ID you created in Keycloak
+            - name: QUARKUS_OIDC_CLIENT_ID
+              value: "quarkus"
+
+            # Inject the secret you just created from core-secrets
+            - name: QUARKUS_OIDC_CREDENTIALS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.files.secrets.name}}
+                  key: {{ .Values.files.secrets.keycloakClientSecret}}
+
+            - name: GCP_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.files.secrets.name}}
+                  key: {{ .Values.files.secrets.gcpProjectId}}
+
+            - name: GCP_PRIVATE_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.files.secrets.name}}
+                  key: {{ .Values.files.secrets.gcpPrivateBucket}}
+
+            - name: GCP_PUBLIC_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.files.secrets.name}}
+                  key: {{ .Values.files.secrets.gcpPublicBucket}}
+
+            - name: GCP_SERVICE_ACCOUNT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.files.secrets.name}}
+                  key: {{ .Values.files.secrets.gcpServiceAccount}}
+
+          # health checks
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: 6868
+            initialDelaySeconds: 15
+            failureThreshold: 20
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 6868
+            initialDelaySeconds: 20
+            periodSeconds: 30
+
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 6868
+            initialDelaySeconds: 20

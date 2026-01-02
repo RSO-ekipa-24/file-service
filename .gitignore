@@ -47,3 +47,6 @@ secrets/*
 
 # Python
 scripts/__pycache__/
+
+*-secrets.yaml
+
