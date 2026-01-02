@@ -45,5 +45,8 @@ secrets/*
 # TLS Certificates
 .certs/
 
+# Python
+scripts/__pycache__/
+
 *-secrets.yaml
 
