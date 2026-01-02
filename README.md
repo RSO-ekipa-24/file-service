@@ -156,6 +156,23 @@ After running these commands, ensure the following is true in your Kubernetes ma
 
 Service uses two buckets, one for private and one for public data. Buckets can be set up with Python script ``scripts/setup-gcs.py``
 
+### Cloud functions
+
+Service works along side cloud functions that confirm file uploads and generate different levels of detail for images. 
+
+They are implemented in the `cloud-function/confirm-upload` and `clooud-fucntion/resize-image` directories. 
+
+Functions are deployed as Gen 2 Cloud Functions which run as a service on Cloud Run. They can be deployed by running Python script `scripts/deploy_cloud_functions.py` which:
+
+- Enables the requred APIs in the Google Cloud Project
+- Grants Eventarc permissions - to trigger the functions
+- Grants Cloud Storage service account Pub/Sub permissions
+- Create Serverless VPC Access Connector - to access GKE services from Cloud Functions
+- Deploys the Functions to the Google Cloud Project
+
+> **_NOTE:_**  Cloud Functions use files-interal-loadbalancer EXTERNAL-IP to access the service inside GKE. Get the EXTERNAL-IP with `kubectl get svc -n essa-project`.
+
+
 ## Related Guides
 
 - REST ([guide](https://quarkus.io/guides/rest)): A Jakarta REST implementation utilizing build time processing and Vert.x. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it.
