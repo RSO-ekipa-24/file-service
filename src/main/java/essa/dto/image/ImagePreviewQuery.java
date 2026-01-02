@@ -12,16 +12,11 @@ public class ImagePreviewQuery {
 
     private List<String> tags;
 
-    public ImagePreviewQuery(
-            UUID id,
-            String bucketName,
-            String objectName,
-            Collection<String> tags
-    ) {
+    public ImagePreviewQuery(UUID id, String bucketName, String objectName, List<String> tags)  {
         this.id = id;
         this.bucketName = bucketName;
         this.objectName = objectName;
-        this.tags = tags == null ? List.of() : new ArrayList<>(tags);
+        this.tags = tags;
     }
 
     public UUID getId() {
