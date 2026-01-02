@@ -5,18 +5,20 @@ import java.util.UUID;
 
 public class ImagePreviewQuery {
     private UUID id;
-
     private String bucketName;
-
     private String objectName;
-
     private List<String> tags;
 
-    public ImagePreviewQuery(UUID id, String bucketName, String objectName, List<String> tags)  {
+    public ImagePreviewQuery(
+            UUID id,
+            String bucketName,
+            String objectName,
+            Set<String> tags
+    ) {
         this.id = id;
         this.bucketName = bucketName;
         this.objectName = objectName;
-        this.tags = tags;
+        this.tags = tags == null ? List.of() : new ArrayList<>(tags);
     }
 
     public UUID getId() {

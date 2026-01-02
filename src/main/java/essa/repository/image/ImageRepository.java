@@ -61,19 +61,19 @@ public class ImageRepository {
     public List<ImagePreviewQuery> findImagePreviewDataForProperty(Long propertyId) {
         String query = """
             SELECT new essa.dto.image.ImagePreviewQuery(
-                f.id,
-                f.bucketName,
-                i.objectName,
-                collect(DISTINCT t.tagName)
-            )
-            FROM File f
-            JOIN f.propertyLinks pf
-            JOIN f.imageLOD i
-            LEFT JOIN f.tags t
-            WHERE pf.id.propertyId = :propertyId
-              AND f.fileType = :fileType
-              AND i.id.levelOfDetail = :lod
-            GROUP BY f.id, f.bucketName, i.objectName
+                 f.id,
+                 f.bucketName,
+                 i.objectName,
+                 collect(DISTINCT t.tagName)
+             )
+             FROM File f
+             JOIN f.propertyLinks pf
+             JOIN f.imageLOD i
+             LEFT JOIN f.tags t
+             WHERE pf.id.propertyId = :propertyId
+               AND f.fileType = :fileType
+               AND i.id.levelOfDetail = :lod
+             GROUP BY f.id, f.bucketName, i.objectName     
         """;
         List<ImagePreviewQuery> results = em.createQuery(query, ImagePreviewQuery.class)
             .setParameter("propertyId", propertyId)
