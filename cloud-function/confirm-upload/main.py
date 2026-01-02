@@ -55,7 +55,7 @@ def on_object_finalize(event, context):
             "Content-Type": "application/json"
         }
         
-        res = requests.post(url, headers=headers, timeout=10)
+        res = requests.put(url, headers=headers, timeout=10)
         res.raise_for_status()
         
     except requests.exceptions.RequestException as e:
