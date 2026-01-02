@@ -64,16 +64,16 @@ public class ImageRepository {
                 f.id,
                 f.bucketName,
                 i.objectName,
-                CAST(collect(DISTINCT t.tagName) AS list)
+                collect(DISTINCT t.tagName)
             )
             FROM File f
             JOIN f.propertyLinks pf
             JOIN f.imageLOD i
             LEFT JOIN f.tags t
             WHERE pf.id.propertyId = :propertyId
-            AND f.fileType = :fileType
-            AND i.id.levelOfDetail = :lod
-            GROUP BY f.id, i.objectName
+              AND f.fileType = :fileType
+              AND i.id.levelOfDetail = :lod
+            GROUP BY f.id, f.bucketName, i.objectName
         """;
         List<ImagePreviewQuery> results = em.createQuery(query, ImagePreviewQuery.class)
             .setParameter("propertyId", propertyId)
