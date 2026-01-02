@@ -117,7 +117,7 @@ jobs:
 
       - name: Deploy Helm Chart to DEV
         run: |
-          helm upgrade --install ${{ env.DEPLOYMENT_NAME }} ./deploy/k8s/charts/core-chart \
+          helm upgrade --install ${{ env.DEPLOYMENT_NAME }} ./deploy/k8s/helm/file-service-chart \
             --set core.deployment.image.repository="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE}" \
             --set core.deployment.image.tag="${GITHUB_SHA}" \
             --namespace essa-project
