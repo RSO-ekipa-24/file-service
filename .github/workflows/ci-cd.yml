@@ -22,7 +22,7 @@ env:
   PROD_CLUSTER: 'essa-cluster'
   PROD_ZONE: 'europe-central2'
 
-  DEPLOYMENT_NAME: files-release'
+  DEPLOYMENT_NAME: files-release
   REPOSITORY: 'essa-images'
   IMAGE: 'files-service'
 
