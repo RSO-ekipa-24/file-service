@@ -3,8 +3,6 @@ package essa.service.gcs;
 import java.util.concurrent.TimeUnit;
 import java.net.URL;
 import java.util.List;
-import java.util.Arrays;
-import java.util.Collections;
 
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
@@ -13,8 +11,6 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.HttpMethod;
-import com.google.cloud.storage.Cors;
-import com.google.cloud.storage.BucketInfo;
 import com.google.api.gax.paging.Page;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ImpersonatedCredentials;
@@ -34,7 +30,7 @@ public class GcsService {
     private final String serviceAccountEmail;
 
     private List<String> scopes = List.of(
-            "https://www.googleapis.com/auth/cloud-platform"
+        "https://www.googleapis.com/auth/cloud-platform"
     );
 
     @Inject
@@ -43,7 +39,7 @@ public class GcsService {
             @ConfigProperty(name = "gcs.private-bucket-name") String privateBucketName,
             @ConfigProperty(name = "gcs.public-bucket-name") String publicBucketName,
             @ConfigProperty(name = "gcs.service-account-email") String serviceAccountEmail
-    ) {
+        ) {
 
         this.privateBucketName = privateBucketName;
         this.publicBucketName = publicBucketName;
@@ -57,22 +53,20 @@ public class GcsService {
         }
 
         ImpersonatedCredentials impersonatedCredentials =
-                ImpersonatedCredentials.create(
-                        sourceCredentials,
-                        serviceAccountEmail,
-                        null,
-                        scopes,
-                        3600
-                );
+            ImpersonatedCredentials.create(
+                sourceCredentials,
+                serviceAccountEmail,
+                null,
+                scopes,
+                3600
+            );
 
+        // Provide Google Application Credentials with ``gcloud auth application-default login`` when running locally
         this.storage = StorageOptions.newBuilder()
-                .setProjectId(projectId)
-                .setCredentials(impersonatedCredentials)
-                .build()
-                .getService();
-
-        setupBucketCors(this.publicBucketName);
-        setupBucketCors(this.privateBucketName);
+            .setProjectId(projectId)
+            .setCredentials(impersonatedCredentials)
+            .build()
+            .getService();
     }
 
     public String getPrivateBucketName() {
@@ -98,24 +92,6 @@ public class GcsService {
         return url;
     }
 
-    private void setupBucketCors(String bucketName) {
-        Cors cors = Cors.newBuilder()
-                .setOrigins(Collections.singletonList(Cors.Origin.of("*"))) // In production, replace "*" with your domain
-                .setMethods(Arrays.asList(
-                        HttpMethod.GET,
-                        HttpMethod.POST,
-                        HttpMethod.PUT,
-                        HttpMethod.OPTIONS
-                ))
-                .setResponseHeaders(Collections.singletonList("Content-Type"))
-                .setMaxAgeSeconds(3600)
-                .build();
-
-        storage.update(BucketInfo.newBuilder(bucketName)
-                .setCors(Collections.singletonList(cors))
-                .build());
-    }
-
     public URL generateV4GetObjectSignedUrl(String bucketName, String objectName, int durationMinutes) {
         BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, objectName))
                 .build();
@@ -136,8 +112,8 @@ public class GcsService {
 
     private Long findLatestDeletedGeneration(String bucketName, String fileName) {
         Page<Blob> blobs = storage.list(bucketName,
-                BlobListOption.softDeleted(true),
-                BlobListOption.prefix(fileName)
+            BlobListOption.softDeleted(true),
+            BlobListOption.prefix(fileName)
         );
 
         for (Blob blob : blobs.iterateAll()) {
@@ -166,3 +142,5 @@ public class GcsService {
         return new URL(urlString);
     }
 }
+
+
