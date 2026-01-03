@@ -77,7 +77,7 @@ public class ImageService {
         }
 
         String bucketName = gcsService.getPublicBucketName();
-        String objectName = generateObjectName(keycloakId, LevelOfDetail.LOW, uuid, request.getFileName());
+        String objectName = generateObjectName(keycloakId, LevelOfDetail.LOW.name(), uuid, request.getFileName());
 
         
         return fileService.handleFileUpload(keycloakId, uuid, bucketName, objectName, request);

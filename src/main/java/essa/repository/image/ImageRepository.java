@@ -77,7 +77,7 @@ public class ImageRepository {
         List<ImagePropertyQuery> images = em.createQuery(query, ImagePropertyQuery.class)
             .setParameter("propertyId", propertyId)
             .setParameter("fileType", essa.entity.enums.FileType.IMAGE)
-            .setParameter("lod", lod)
+            .setParameter("lod", lod.name())
             .getResultList();
 
         String query2 = """
