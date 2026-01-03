@@ -60,55 +60,43 @@ public class ImageRepository {
     }
 
     @Transactional
-    public List<ImagePropertyQuery> findImagePreviewDataForProperty(Long propertyId) {
-
+    public List<ImagePropertyQuery> findImagePreviewDataForProperty(Long propertyId, LevelOfDetail lod) {
         String query = """
-        SELECT new essa.dto.image.ImagePropertyQuery(
-            f.id,
-            f.bucketName,
-            i.objectName,
-            i.id.levelOfDetail
-        )
-        FROM File f
-        JOIN f.propertyLinks pf
-        JOIN f.imageLOD i
-        WHERE pf.id.propertyId = :propertyId
-          AND f.fileType = :fileType
-    """;
-
+            SELECT new essa.dto.image.ImagePropertyQuery(
+                f.id,
+                f.bucketName,
+                i.objectName
+            )
+            FROM File f
+            JOIN f.propertyLinks pf
+            JOIN f.imageLOD i
+            WHERE pf.id.propertyId = :propertyId
+              AND f.fileType = :fileType
+              AND i.id.levelOfDetail = :lod
+        """;
         List<ImagePropertyQuery> images = em.createQuery(query, ImagePropertyQuery.class)
-                .setParameter("propertyId", propertyId)
-                .setParameter("fileType", essa.entity.enums.FileType.IMAGE)
-                .getResultList();
-
-        if (images.isEmpty()) {
-            return images;
-        }
+            .setParameter("propertyId", propertyId)
+            .setParameter("fileType", essa.entity.enums.FileType.IMAGE)
+            .setParameter("lod", lod)
+            .getResultList();
 
         String query2 = """
-        SELECT f.id, t.tagName
-        FROM File f
-        JOIN f.tags t
-        WHERE f.id IN :fileIds
-    """;
+            SELECT f.id, t.tagName
+            FROM File f
+            JOIN f.tags t
+            WHERE f.id IN :fileIds
+                """;
+        Map<UUID, List<String>> tagsByFileId = em.createQuery(query2, Object[].class)
+            .setParameter("fileIds", images.stream().map(ImagePropertyQuery::getId).toList())
+            .getResultStream()
+            .collect(
+                Collectors.groupingBy(
+                    row -> (UUID) row[0],
+                    Collectors.mapping(row -> (String) row[1], Collectors.toList())
+                )
+            );
 
-        Map<UUID, List<String>> tagsByFileId =
-                em.createQuery(query2, Object[].class)
-                        .setParameter(
-                                "fileIds",
-                                images.stream().map(ImagePropertyQuery::getId).distinct().toList()
-                        )
-                        .getResultStream()
-                        .collect(
-                                Collectors.groupingBy(
-                                        row -> (UUID) row[0],
-                                        Collectors.mapping(row -> (String) row[1], Collectors.toList())
-                                )
-                        );
-
-        images.forEach(image ->
-                image.setTags(tagsByFileId.getOrDefault(image.getId(), List.of()))
-        );
+        images.forEach(image -> image.setTags(tagsByFileId.getOrDefault(image.getId(), List.of())));
 
         return images;
     }

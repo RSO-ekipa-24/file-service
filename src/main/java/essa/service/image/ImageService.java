@@ -165,7 +165,7 @@ public class ImageService {
     }
 
     @Transactional
-    public List<ImagePropertyResponse> getImagesForProperty(@NotNull Long propertyId) throws Exception {
+    public List<ImagePropertyResponse> getImagesForProperty(@NotNull Long propertyId) {
 
         List<ImagePropertyQuery> imageData =
                 imageRepository.findImagePreviewDataForProperty(propertyId);
@@ -183,6 +183,7 @@ public class ImageService {
             response.setId(data.getId());
             response.setImageUrl(downloadUrl);
             response.setTags(data.getTags());
+            response.setLevelOfDetail(data.getLevelOfDetail());
 
             responseList.add(response);
         }
