@@ -74,7 +74,7 @@ public class ImageResource {
     @GET
     @Path("/property/{propertyId}")
     public Response getImagesForProperty(@PathParam("propertyId") Long propertyId, @QueryParam("lod") LevelOfDetail levelOfDetail) throws Exception {
-        List<ImagePropertyResponse> imageIds = imageService.getImagesForProperty(propertyId, levelOfDetail);
+        List<ImagePropertyResponse> imageIds = imageService.getImagesForProperty(propertyId);
         return Response.status(Response.Status.OK).entity(imageIds).build();
     }
     
