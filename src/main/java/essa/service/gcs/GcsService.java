@@ -30,7 +30,7 @@ public class GcsService {
     private final String serviceAccountEmail;
 
     private List<String> scopes = List.of(
-        "https://www.googleapis.com/auth/cloud-platform"
+            "https://www.googleapis.com/auth/cloud-platform"
     );
 
     @Inject
@@ -39,8 +39,8 @@ public class GcsService {
             @ConfigProperty(name = "gcs.private-bucket-name") String privateBucketName,
             @ConfigProperty(name = "gcs.public-bucket-name") String publicBucketName,
             @ConfigProperty(name = "gcs.service-account-email") String serviceAccountEmail
-        ) {
-        
+    ) {
+
         this.privateBucketName = privateBucketName;
         this.publicBucketName = publicBucketName;
         this.serviceAccountEmail = serviceAccountEmail;
@@ -51,22 +51,26 @@ public class GcsService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to obtain application default credentials", e);
         }
-        
+
         ImpersonatedCredentials impersonatedCredentials =
-            ImpersonatedCredentials.create(
-                sourceCredentials,
-                serviceAccountEmail,
-                null,
-                scopes,
-                3600
-            );
-                
+                ImpersonatedCredentials.create(
+                        sourceCredentials,
+                        serviceAccountEmail,
+                        null,
+                        scopes,
+                        3600
+                );
+
+        // Apply CORS settings to your buckets on startup
+        setupBucketCors(this.publicBucketName);
+        setupBucketCors(this.privateBucketName);
+
         // Provide Google Application Credentials with ``gcloud auth application-default login`` when running locally
         this.storage = StorageOptions.newBuilder()
-            .setProjectId(projectId)
-            .setCredentials(impersonatedCredentials)
-            .build()
-            .getService();
+                .setProjectId(projectId)
+                .setCredentials(impersonatedCredentials)
+                .build()
+                .getService();
     }
 
     public String getPrivateBucketName() {
@@ -92,6 +96,19 @@ public class GcsService {
         return url;
     }
 
+    private void setupBucketCors(String bucketName) {
+        Cors cors = Cors.newBuilder()
+                .setOrigins(Collections.singletonList(Cors.Origin.of("*"))) // In production, replace "*" with your domain
+                .setMethods(Collections.singletonList(HttpMethod.PUT))
+                .setResponseHeaders(Collections.singletonList("Content-Type"))
+                .setMaxAgeSeconds(3600)
+                .build();
+
+        storage.update(BucketInfo.newBuilder(bucketName)
+                .setCors(Collections.singletonList(cors))
+                .build());
+    }
+
     public URL generateV4GetObjectSignedUrl(String bucketName, String objectName, int durationMinutes) {
         BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, objectName))
                 .build();
@@ -111,9 +128,9 @@ public class GcsService {
     }
 
     private Long findLatestDeletedGeneration(String bucketName, String fileName) {
-        Page<Blob> blobs = storage.list(bucketName, 
-            BlobListOption.softDeleted(true),
-            BlobListOption.prefix(fileName)
+        Page<Blob> blobs = storage.list(bucketName,
+                BlobListOption.softDeleted(true),
+                BlobListOption.prefix(fileName)
         );
 
         for (Blob blob : blobs.iterateAll()) {
@@ -142,5 +159,3 @@ public class GcsService {
         return new URL(urlString);
     }
 }
-
-
