@@ -11,8 +11,8 @@ import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
 import essa.dto.image.ImageAddLODRequest;
 import essa.dto.image.PropertyThumbnailsResponse;
-import essa.dto.image.ImagePreviewResponse;
-import essa.dto.image.ImagePreviewQuery;
+import essa.dto.image.ImagePropertyResponse;
+import essa.dto.image.ImagePropertyQuery;
 import essa.entity.ImageLevelOfDetail;
 import essa.entity.enums.LevelOfDetail;
 import essa.entity.enums.FileStatus;
@@ -165,19 +165,22 @@ public class ImageService {
     }
 
     @Transactional
-    public List<ImagePreviewResponse> getImagesForProperty(@NotNull Long propertyId) throws Exception {
-        List<ImagePreviewQuery> imageData = imageRepository.findImagePreviewDataForProperty(propertyId);
+    public List<ImagePropertyResponse> getImagesForProperty(@NotNull Long propertyId, LevelOfDetail levelOfDetail) throws Exception {
+        if (levelOfDetail == null)
+            levelOfDetail = LevelOfDetail.LOW;
+        
+        List<ImagePropertyQuery> imageData = imageRepository.findImagePreviewDataForProperty(propertyId, levelOfDetail);
 
-        if (imageData.isEmpty()) {
-            throw new WebApplicationException("No images found for property", Response.Status.NOT_FOUND);
-        }
+        // if (imageData.isEmpty()) {
+        //     throw new WebApplicationException("No images found for property", Response.Status.NOT_FOUND);
+        // }
 
-        List<ImagePreviewResponse> responseList = new ArrayList<>();
-        for (ImagePreviewQuery data : imageData) {
+        List<ImagePropertyResponse> responseList = new ArrayList<>();
+        for (ImagePropertyQuery data : imageData) {
             URL downloadUrl = gcsService.generatePublicObjectUrl(data.getBucketName(), data.getObjectName());
-            ImagePreviewResponse response = new ImagePreviewResponse();
+            ImagePropertyResponse response = new ImagePropertyResponse();
             response.setId(data.getId());
-            response.setPreviewUrl(downloadUrl);
+            response.setImageUrl(downloadUrl);
             response.setTags(data.getTags());
 
             responseList.add(response);

@@ -8,7 +8,7 @@ import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
 import essa.dto.image.ImageAddLODRequest;
 import essa.dto.image.PropertyThumbnailsResponse;
-import essa.dto.image.ImagePreviewResponse;
+import essa.dto.image.ImagePropertyResponse;
 import essa.entity.enums.LevelOfDetail;
 import essa.service.image.ImageService;
 import essa.service.file.FileService;
@@ -73,8 +73,8 @@ public class ImageResource {
 
     @GET
     @Path("/property/{propertyId}")
-    public Response getImagesForProperty(@PathParam("propertyId") Long propertyId) throws Exception {
-        List<ImagePreviewResponse> imageIds = imageService.getImagesForProperty(propertyId);
+    public Response getImagesForProperty(@PathParam("propertyId") Long propertyId, @QueryParam("lod") LevelOfDetail levelOfDetail) throws Exception {
+        List<ImagePropertyResponse> imageIds = imageService.getImagesForProperty(propertyId, levelOfDetail);
         return Response.status(Response.Status.OK).entity(imageIds).build();
     }
     
