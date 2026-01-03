@@ -183,7 +183,6 @@ public class ImageService {
             response.setId(data.getId());
             response.setImageUrl(downloadUrl);
             response.setTags(data.getTags());
-            response.setLevelOfDetail(data.getLevelOfDetail());
 
             responseList.add(response);
         }
