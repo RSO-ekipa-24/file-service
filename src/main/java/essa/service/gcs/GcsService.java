@@ -99,7 +99,12 @@ public class GcsService {
     private void setupBucketCors(String bucketName) {
         Cors cors = Cors.newBuilder()
                 .setOrigins(Collections.singletonList(Cors.Origin.of("*"))) // In production, replace "*" with your domain
-                .setMethods(Collections.singletonList(HttpMethod.PUT))
+                .setMethods(Arrays.asList(
+                        HttpMethod.GET,
+                        HttpMethod.POST,
+                        HttpMethod.PUT,
+                        HttpMethod.OPTIONS
+                ))
                 .setResponseHeaders(Collections.singletonList("Content-Type"))
                 .setMaxAgeSeconds(3600)
                 .build();
