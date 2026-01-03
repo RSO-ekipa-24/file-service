@@ -13,6 +13,8 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.HttpMethod;
+import com.google.cloud.storage.Cors;
+import com.google.cloud.storage.BucketInfo;
 import com.google.api.gax.paging.Page;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ImpersonatedCredentials;
@@ -63,16 +65,14 @@ public class GcsService {
                         3600
                 );
 
-        // Apply CORS settings to your buckets on startup
-        setupBucketCors(this.publicBucketName);
-        setupBucketCors(this.privateBucketName);
-
-        // Provide Google Application Credentials with ``gcloud auth application-default login`` when running locally
         this.storage = StorageOptions.newBuilder()
                 .setProjectId(projectId)
                 .setCredentials(impersonatedCredentials)
                 .build()
                 .getService();
+
+        setupBucketCors(this.publicBucketName);
+        setupBucketCors(this.privateBucketName);
     }
 
     public String getPrivateBucketName() {
