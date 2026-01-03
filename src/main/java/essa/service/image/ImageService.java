@@ -165,7 +165,7 @@ public class ImageService {
     }
 
     @Transactional
-    public List<ImagePropertyResponse> getImagesForProperty(@NotNull Long propertyId) {
+    public List<ImagePropertyResponse> getImagesForProperty(@NotNull Long propertyId) throws Exception {
 
         List<ImagePropertyQuery> imageData =
                 imageRepository.findImagePreviewDataForProperty(propertyId);
