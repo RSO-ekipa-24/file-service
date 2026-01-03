@@ -165,28 +165,27 @@ public class ImageService {
     }
 
     @Transactional
-    public List<ImagePropertyResponse> getImagesForProperty(@NotNull Long propertyId) {
+    public List<ImagePropertyResponse> getImagesForProperty(@NotNull Long propertyId, LevelOfDetail levelOfDetail) throws Exception {
+        if (levelOfDetail == null)
+            levelOfDetail = LevelOfDetail.LOW;
 
-        List<ImagePropertyQuery> imageData =
-                imageRepository.findImagePreviewDataForProperty(propertyId);
+        List<ImagePropertyQuery> imageData = imageRepository.findImagePreviewDataForProperty(propertyId, levelOfDetail);
+
+        // if (imageData.isEmpty()) {
+        //     throw new WebApplicationException("No images found for property", Response.Status.NOT_FOUND);
+        // }
 
         List<ImagePropertyResponse> responseList = new ArrayList<>();
-
         for (ImagePropertyQuery data : imageData) {
-            URL downloadUrl =
-                    gcsService.generatePublicObjectUrl(
-                            data.getBucketName(),
-                            data.getObjectName()
-                    );
-
+            URL downloadUrl = gcsService.generatePublicObjectUrl(data.getBucketName(), data.getObjectName());
             ImagePropertyResponse response = new ImagePropertyResponse();
             response.setId(data.getId());
             response.setImageUrl(downloadUrl);
             response.setTags(data.getTags());
-            response.setLevelOfDetail(data.getLevelOfDetail());
 
             responseList.add(response);
         }
+
 
         return responseList;
     }
