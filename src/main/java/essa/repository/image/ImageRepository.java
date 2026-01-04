@@ -5,6 +5,8 @@ import java.util.UUID;
 import essa.entity.enums.LevelOfDetail;
 import essa.dto.image.PropertyThumbnailsResponse;
 import essa.dto.image.ImagePropertyQuery;
+import essa.entity.enums.FileType;
+import essa.entity.File;
 import essa.entity.ImageLevelOfDetail;
 import essa.entity.id.ImageLevelOfDetailId;
 import essa.repository.file.FileRepository;
@@ -75,7 +77,7 @@ public class ImageRepository {
                 """;
         List<ImagePropertyQuery> images = em.createQuery(query, ImagePropertyQuery.class)
             .setParameter("propertyId", propertyId)
-            .setParameter("fileType", essa.entity.enums.FileType.IMAGE)
+            .setParameter("fileType", FileType.IMAGE)
             .getResultList();
 
         List<UUID> imageIds = images.stream().map(ImagePropertyQuery::getId).toList();
@@ -102,7 +104,7 @@ public class ImageRepository {
         """;
         List<ImagePropertyQuery> images = em.createQuery(query, ImagePropertyQuery.class)
             .setParameter("propertyId", propertyId)
-            .setParameter("fileType", essa.entity.enums.FileType.IMAGE)
+            .setParameter("fileType", FileType.IMAGE)
             .setParameter("lod", lod)
             .getResultList();
 
@@ -112,5 +114,22 @@ public class ImageRepository {
         images.forEach(image -> image.setTags(tagsByImageId.getOrDefault(image.getId(), List.of())));
 
         return images;
+    }
+
+    @Transactional 
+    public List<File> findImagesByPropertyIdAndOwner(Long propertyId, String ownerKeycloakId) {
+        String query = """
+            SELECT f
+            FROM File f
+            JOIN f.propertyLinks pf
+            WHERE pf.id.propertyId = :propertyId
+              AND f.ownerKeycloakId = :ownerKeycloakId
+              AND f.fileType = :fileType
+        """;
+        return em.createQuery(query, File.class)
+            .setParameter("propertyId", propertyId)
+            .setParameter("ownerKeycloakId", ownerKeycloakId)
+            .setParameter("fileType", FileType.IMAGE)
+            .getResultList();
     }
 }

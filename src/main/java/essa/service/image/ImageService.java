@@ -85,29 +85,43 @@ public class ImageService {
     public void hardDeleteImage(@NotNull UUID id) throws Exception {
         String keycloakId = securityIdentity.getPrincipal().getName();
 
-        File file = fileRepository.findById(id);
-        if (file == null) {
+        File image = fileRepository.findById(id);
+        if (image == null) {
             throw new WebApplicationException("Image not found", Response.Status.NOT_FOUND);
         }
-        if (!file.getOwnerKeycloakId().equals(keycloakId)) {
+        if (!image.getOwnerKeycloakId().equals(keycloakId)) {
             throw new WebApplicationException("Forbidden", Response.Status.FORBIDDEN);
         }
 
-        boolean deleted = gcsService.deleteObject(file.getBucketName(), file.getObjectName());
+        handleHardDeleteImage(image);
+    } 
+
+    public void handleHardDeleteImage(File image) throws Exception {
+        boolean deleted = gcsService.deleteObject(image.getBucketName(), image.getObjectName());
         if (!deleted) {
             throw new WebApplicationException("Failed to delete image from storage", Response.Status.INTERNAL_SERVER_ERROR);
         }
 
-        imageRepository.getAllImageLODsByFileId(id).forEach(lod -> {
-            boolean deletedLOD = gcsService.deleteObject(file.getBucketName(), lod.getObjectName());
+        imageRepository.getAllImageLODsByFileId(image.getId()).forEach(lod -> {
+            boolean deletedLOD = gcsService.deleteObject(image.getBucketName(), lod.getObjectName());
             if (!deletedLOD) {
                 throw new WebApplicationException("Failed to delete image LOD from storage", Response.Status.INTERNAL_SERVER_ERROR);
             }
         });
 
-        fileRepository.delete(file);
+        fileRepository.delete(image);
     }
 
+    @Transactional
+    public void deleteImagesOfProperty(@NotNull Long propertyId) throws Exception {
+        String keycloakId = securityIdentity.getPrincipal().getName();
+
+        List<File> images = imageRepository.findImagesByPropertyIdAndOwner(propertyId, keycloakId);
+        
+        for (File image : images) {
+            handleHardDeleteImage(image);
+        }
+    }
 
     @Transactional
     public void addLevelOfDetailToImage(@Valid @NotNull ImageAddLODRequest request) throws Exception {

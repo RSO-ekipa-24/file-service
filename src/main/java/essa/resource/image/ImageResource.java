@@ -63,6 +63,14 @@ public class ImageResource {
         return Response.status(Response.Status.NO_CONTENT).build();
     }
 
+    @DELETE
+    @Path("/delete-property-images/{propertyId}")
+    @RolesAllowed({"user", "admin"})
+    public Response deletePropertyImages(@PathParam("propertyId") Long propertyId) throws Exception {
+        imageService.deleteImagesOfProperty(propertyId);
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
     @POST
     @Path("/add-level-of-detail")
     @RolesAllowed({"system", "admin"})
