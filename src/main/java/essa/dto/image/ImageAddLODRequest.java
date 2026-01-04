@@ -17,6 +17,9 @@ public class ImageAddLODRequest {
     @NotNull(message = "Level of detail is required")
     private LevelOfDetail levelOfDetail;
 
+    @NotBlank(message = "Object name is required")
+    private String objectName;
+
     @NotNull(message = "Size is required")
     @Min(value = 1, message = "Size must be non-negative")
     @Max(value = 1073741824, message = "Size must be less than or equal to 1GB")
@@ -43,6 +46,14 @@ public class ImageAddLODRequest {
 
     public void setLevelOfDetail(LevelOfDetail levelOfDetail) {
         this.levelOfDetail = levelOfDetail;
+    }
+
+    public String getObjectName() {
+        return objectName;
+    }
+
+    public void setObjectName(String objectName) {
+        this.objectName = objectName;
     }
     
     public long getFileSize() {

@@ -25,6 +25,13 @@ public class FileResource {
     @Inject
     FileService fileService;
 
+    @GET
+    @RolesAllowed({"user", "admin"})
+    public Response getAllFilesOfUser() throws Exception {
+        List<FileMetadataResponse> files = fileService.getAllFilesOfUser();
+        return Response.status(Response.Status.OK).entity(files).build();
+    }
+
     @POST
     @Path("/upload")
     @RolesAllowed({"user", "admin"})

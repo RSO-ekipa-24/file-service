@@ -40,7 +40,7 @@ public class GcsService {
             @ConfigProperty(name = "gcs.public-bucket-name") String publicBucketName,
             @ConfigProperty(name = "gcs.service-account-email") String serviceAccountEmail
         ) {
-        
+
         this.privateBucketName = privateBucketName;
         this.publicBucketName = publicBucketName;
         this.serviceAccountEmail = serviceAccountEmail;
@@ -51,16 +51,16 @@ public class GcsService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to obtain application default credentials", e);
         }
-        
+
         ImpersonatedCredentials impersonatedCredentials =
             ImpersonatedCredentials.create(
                 sourceCredentials,
-                serviceAccountEmail,
+                this.serviceAccountEmail,
                 null,
                 scopes,
                 3600
             );
-                
+
         // Provide Google Application Credentials with ``gcloud auth application-default login`` when running locally
         this.storage = StorageOptions.newBuilder()
             .setProjectId(projectId)
@@ -111,7 +111,7 @@ public class GcsService {
     }
 
     private Long findLatestDeletedGeneration(String bucketName, String fileName) {
-        Page<Blob> blobs = storage.list(bucketName, 
+        Page<Blob> blobs = storage.list(bucketName,
             BlobListOption.softDeleted(true),
             BlobListOption.prefix(fileName)
         );

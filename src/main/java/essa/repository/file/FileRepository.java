@@ -1,6 +1,8 @@
 package essa.repository.file;
 
 import essa.entity.File;
+import essa.entity.enums.FileStatus;
+
 import io.smallrye.common.constraint.NotNull;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
@@ -8,7 +10,10 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.time.OffsetDateTime;
 
 @ApplicationScoped
 public class FileRepository {
@@ -32,15 +37,6 @@ public class FileRepository {
     }
 
     @Transactional
-    public void delete(@NotNull UUID id) {
-        File file = findById(id);
-        if (file != null) {
-            // property_file and file_access relations are deleted with DELETE ON CASCADE
-            em.remove(file);   
-        }
-    }
-
-    @Transactional
     public void delete(@NotNull File file) {
         if (em.contains(file)) {
             em.remove(file);
@@ -58,11 +54,48 @@ public class FileRepository {
     }
 
     @Transactional
-    public List<File> findDeletedFilesByOwner(String ownerId) {
-        String query = "SELECT f FROM File f WHERE f.ownerId = :ownerId AND f.status = :status";
+    public List<File> findAllFilesByOwner(String ownerId) {
+        String query = "SELECT f FROM File f WHERE f.ownerKeycloakId = :ownerId AND f.status != :status";
         return em.createQuery(query, File.class)
                 .setParameter("ownerId", ownerId)
-                .setParameter("status", essa.entity.enums.FileStatus.DELETED)
+                .setParameter("status", FileStatus.DELETED)
                 .getResultList();
+    }
+
+    @Transactional
+    public List<File> findDeletedFilesByOwner(String ownerId) {
+        String query = "SELECT f FROM File f WHERE f.ownerKeycloakId = :ownerId AND f.status = :status";
+        return em.createQuery(query, File.class)
+                .setParameter("ownerId", ownerId)
+                .setParameter("status", FileStatus.DELETED)
+                .getResultList();
+    }
+
+    @Transactional 
+    public List<File> findFilesWithStatusOlderThan(OffsetDateTime cutoffDate, FileStatus status) {
+        String query = "SELECT f FROM File f WHERE f.status = :status AND f.modified <= :cutoffDate";
+        return em.createQuery(query, File.class)
+                .setParameter("status", status)
+                .setParameter("cutoffDate", cutoffDate)
+                .getResultList();
+    }
+
+    @Transactional
+    public Map<UUID, List<String>> findTagNamesForFileIds(List<UUID> fileIds) {
+        String query = """
+            SELECT f.id, t.tagName
+            FROM File f
+            JOIN f.tags t
+            WHERE f.id IN :fileIds
+        """;
+        return  em.createQuery(query, Object[].class)
+            .setParameter("fileIds", fileIds)
+            .getResultStream()
+            .collect(
+                Collectors.groupingBy(
+                    row -> (UUID) row[0],
+                    Collectors.mapping(row -> (String) row[1], Collectors.toList())
+                )
+            );
     }
 }

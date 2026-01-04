@@ -8,6 +8,9 @@ import jakarta.persistence.Enumerated;
 import java.io.Serializable;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 @Embeddable
 public class ImageLevelOfDetailId implements Serializable {
 
@@ -15,6 +18,7 @@ public class ImageLevelOfDetailId implements Serializable {
     private UUID fileId;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "level_of_detail")
     private LevelOfDetail levelOfDetail;
 

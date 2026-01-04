@@ -4,19 +4,19 @@ import java.util.UUID;
 import java.net.URL;
 import java.util.List;
 
-public class ImagePreviewResponse {
+public class ImagePropertyResponse {
 
     private UUID id;
 
-    private URL previewUrl;
+    private URL imageUrl;
 
     private List<String> tags;
 
-    public ImagePreviewResponse() {}
+    public ImagePropertyResponse() {}
 
-    public ImagePreviewResponse(UUID id, URL previewUrl, List<String> tags) {
+    public ImagePropertyResponse(UUID id, URL imageUrl, List<String> tags) {
         this.id = id;
-        this.previewUrl = previewUrl;
+        this.imageUrl = imageUrl;
         this.tags = tags;
     }
 
@@ -28,12 +28,12 @@ public class ImagePreviewResponse {
         this.id = id;
     }
 
-    public URL getPreviewUrl() {
-        return previewUrl;
+    public URL getImageUrl() {
+        return imageUrl;
     }
 
-    public void setPreviewUrl(URL previewUrl) {
-        this.previewUrl = previewUrl;
+    public void setImageUrl(URL imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public List<String> getTags() {

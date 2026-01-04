@@ -1,7 +1,6 @@
 package essa.resource.tag;
 
 import essa.service.tag.TagService;
-import essa.entity.Tag;
 import essa.dto.tag.TagCreateRequest;
 import essa.dto.tag.TagGetResponse;
 import io.quarkus.security.identity.SecurityIdentity;
