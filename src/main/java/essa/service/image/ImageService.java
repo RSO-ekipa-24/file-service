@@ -111,23 +111,23 @@ public class ImageService {
 
     @Transactional
     public void addLevelOfDetailToImage(@Valid @NotNull ImageAddLODRequest request) throws Exception {
-        UUID fileId = request.getFileId();
+        UUID id = request.getId();
         LevelOfDetail levelOfDetail = request.getLevelOfDetail();
 
-        File file = fileRepository.findById(fileId);
+        File file = fileRepository.findById(id);
         if (file == null) {
             throw new WebApplicationException("Image does not exist", Response.Status.NOT_FOUND);
         }
 
-        ImageLevelOfDetailId id = new ImageLevelOfDetailId();
-        id.setFileId(fileId);
-        id.setLevelOfDetail(levelOfDetail);
+        ImageLevelOfDetailId lodId = new ImageLevelOfDetailId();
+        lodId.setFileId(id);
+        lodId.setLevelOfDetail(levelOfDetail);
 
         ImageLevelOfDetail imageLOD = new ImageLevelOfDetail();
-        imageLOD.setId(id);
+        imageLOD.setId(lodId);
         imageLOD.setFile(file);
         imageLOD.setObjectName(request.getObjectName());
-        imageLOD.setFileSize(request.getFileSize());
+        imageLOD.setFileSize(request.getSize());
 
         file.addImageLOD(imageLOD);
     }

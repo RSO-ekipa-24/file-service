@@ -12,7 +12,7 @@ import jakarta.validation.constraints.NotNull;
 public class ImageAddLODRequest {
 
     @NotBlank(message = "File id is required")
-    private String fileId;
+    private String id;
 
     @NotNull(message = "Level of detail is required")
     private LevelOfDetail levelOfDetail;
@@ -23,21 +23,21 @@ public class ImageAddLODRequest {
     @NotNull(message = "Size is required")
     @Min(value = 1, message = "Size must be non-negative")
     @Max(value = 1073741824, message = "Size must be less than or equal to 1GB")
-    long fileSize;
+    long size; // in bytes
 
     public ImageAddLODRequest() {}
 
-    public ImageAddLODRequest(String fileId, LevelOfDetail levelOfDetail) {
-        this.fileId = fileId;
+    public ImageAddLODRequest(String id, LevelOfDetail levelOfDetail) {
+        this.id = id;
         this.levelOfDetail = levelOfDetail;
     }
 
-    public UUID getFileId() {
-        return UUID.fromString(fileId);
+    public UUID getId() {
+        return UUID.fromString(id);
     }
 
-    public void setFileId(UUID fileId) {
-        this.fileId = fileId.toString();
+    public void setId(UUID id) {
+        this.id = id.toString();
     }
 
     public LevelOfDetail getLevelOfDetail() {
@@ -56,11 +56,11 @@ public class ImageAddLODRequest {
         this.objectName = objectName;
     }
     
-    public long getFileSize() {
-        return fileSize;
+    public long getSize() {
+        return size;
     }
 
-    public void setFileSize(long fileSize) {
-        this.fileSize = fileSize;
+    public void setSize(long size) {
+        this.size = size;
     }
 }

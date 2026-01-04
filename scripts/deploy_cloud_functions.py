@@ -17,10 +17,11 @@ region = os.getenv("GCP_REGION")
 serverless_vpc_connector_name = os.getenv("GCP_SERVERLESS_VPC_CONNECTOR_NAME", "files-cloud-run-connector")
 private_bucket = os.getenv("GCP_PRIVATE_BUCKET")
 public_bucket = os.getenv("GCP_PUBLIC_BUCKET")
-kc_token_url = os.getenv("KC_TOKEN_URL")
-kc_client_id = os.getenv("KC_CLIENT_ID")
-kc_client_secret = os.getenv("KC_CLIENT_SECRET")
-confirm_file_service_url = os.getenv("CONFIRM_FILE_SERVICE_URL")
+keycloak_url = os.getenv("KEYCLOAK_URL")
+keycloak_realm = os.getenv("KEYCLOAK_REALM")
+keycloak_client_id = os.getenv("KEYCLOAK_CLIENT_ID")
+keycloak_client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
+file_service_address = os.getenv("FILE_SERVICE_ADDRESS")
 
 # -------------------------
 # Detect gcloud/gsutil paths
@@ -135,7 +136,7 @@ subprocess.run(
         "--vpc-connector", serverless_vpc_connector_name,
         "--egress-settings", "private-ranges-only",
         "--set-env-vars",
-        f"KC_TOKEN_URL={kc_token_url},KC_CLIENT_ID={kc_client_id},KC_CLIENT_SECRET={kc_client_secret},CONFIRM_FILE_SERVICE_URL={confirm_file_service_url}",
+        f"KEYCLOAK_URL={keycloak_url},KEYCLOAK_REALM={keycloak_realm},KEYCLOAK_CLIENT_ID={keycloak_client_id},KEYCLOAK_CLIENT_SECRET={keycloak_client_secret},FILE_SERVICE_ADDRESS={file_service_address}",
         "--project", gcp_project
     ],
     check=True
@@ -156,10 +157,54 @@ subprocess.run(
         "--vpc-connector", serverless_vpc_connector_name,
         "--egress-settings", "private-ranges-only",
         "--set-env-vars",
-        f"KC_TOKEN_URL={kc_token_url},KC_CLIENT_ID={kc_client_id},KC_CLIENT_SECRET={kc_client_secret},CONFIRM_FILE_SERVICE_URL={confirm_file_service_url}",
+        f"KEYCLOAK_URL={keycloak_url},KEYCLOAK_REALM={keycloak_realm},KEYCLOAK_CLIENT_ID={keycloak_client_id},KEYCLOAK_CLIENT_SECRET={keycloak_client_secret},FILE_SERVICE_ADDRESS={file_service_address}",
         "--project", gcp_project
     ],
     check=True
 )
 print("Deployment confirm-upload completed.")
+print()
+
+
+# -------------------------
+# Deploy resize-image Cloud Functions
+# -------------------------
+print("Deploy resize-image Cloud Function...")
+subprocess.run(
+    [
+        GCLOUD, "functions", "deploy", "resize-image",
+        "--gen2",
+        "--runtime", "python312",
+        "--region", region,
+        "--source", str(Path(__file__).parent.parent / "cloud-function/resize-image"),
+        "--entry-point", "on_object_finalize",
+        "--trigger-event", "google.cloud.storage.object.v1.finalized",
+        "--trigger-resource", public_bucket,
+        "--vpc-connector", serverless_vpc_connector_name,
+        "--egress-settings", "private-ranges-only",
+        "--memory", "512MB",
+        "--timeout", "60s",
+        "--set-env-vars",
+        f"KEYCLOAK_URL={keycloak_url},KEYCLOAK_REALM={keycloak_realm},KEYCLOAK_CLIENT_ID={keycloak_client_id},KEYCLOAK_CLIENT_SECRET={keycloak_client_secret},FILE_SERVICE_ADDRESS={file_service_address}",
+        "--project", gcp_project
+    ],
+    check=True
+)
+print()
+
+# -------------------------
+# Grant resize-image Cloud Function service account Storage permissions
+# -------------------------
+print("Grant resize-image Cloud Function service account Storage permissions...")
+resize_image_sa = f"resize-image@{gcp_project}.iam.gserviceaccount.com"
+
+subprocess.run(
+    [
+        GCLOUD, "projects", "add-iam-policy-binding", gcp_project,
+        "--member", f"serviceAccount:{resize_image_sa}",
+        "--role", "roles/storage.admin"
+    ],
+    check=True
+)
+print("Deployment resize-image completed.")
 print()
