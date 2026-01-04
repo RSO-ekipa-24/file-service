@@ -10,13 +10,14 @@ import subprocess
 from pathlib import Path
 
 from load_env import load_env_file
-from check_command import check_command
 
-# -------------------------
-# Detect gcloud/gsutil paths
-# -------------------------
-GCLOUD = check_command("gcloud")
-GSUTIL = check_command("gsutil")
+GCLOUD = "gcloud"
+GSUTIL = "gsutil"
+
+# Fix for windows
+if os.name == "nt":
+    GCLOUD += ".cmd"
+    GSUTIL += ".cmd"
 
 # -------------------------
 # Load .env

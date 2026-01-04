@@ -2,6 +2,8 @@ import requests
 import os
 import logging
 
+from google.cloud import storage
+
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL")
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")
 KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID")
@@ -35,11 +37,18 @@ def extract_uuid(name):
     if len(split_slash) == 0:
         return None
     name = split_slash[-1]
-    uuid_end_index = name.rfind('-')
-    if uuid_end_index == -1:
+    name_split = name.split('-')
+    if len(name_split) < 5:
         return None
-    uuid = name[0:uuid_end_index]
+    uuid = "-".join(name_split[0:5])
     return uuid
+
+def delete_blob(bucket, object_name):
+    """Delete blob from GCS bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket)
+    blob = bucket.blob(object_name)
+    blob.delete()
 
 def on_object_finalize(event, context):
     """Triggered by GCS object finalized event."""
@@ -64,7 +73,9 @@ def on_object_finalize(event, context):
         
     except requests.exceptions.RequestException as e:
         logging.error(f"Error confirming file: {e}")
+        delete_blob(bucket, object_name)
         raise
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
+        delete_blob(bucket, object_name)
         raise
