@@ -30,6 +30,22 @@ public class ImageResource {
     @Inject 
     FileService fileService;
 
+    // Public endpoints
+    @GET
+    @Path("/download/{id}")
+    public Response downloadFile(@PathParam("id") String id, @QueryParam("lod") LevelOfDetail levelOfDetail) throws Exception {
+        URL downloadUrl = imageService.downloadImage(UUID.fromString(id), levelOfDetail);
+        return Response.status(Response.Status.OK).entity(downloadUrl).build();
+    }
+
+    @GET
+    @Path("/property/{propertyId}")
+    public Response getImagesOfProperty(@PathParam("propertyId") Long propertyId, @QueryParam("lod") LevelOfDetail levelOfDetail) throws Exception {
+        List<ImagePropertyResponse> imageIds = imageService.getImagesOfProperty(propertyId, levelOfDetail);
+        return Response.status(Response.Status.OK).entity(imageIds).build();
+    }
+
+    // Protected endpoints
     @POST
     @Path("/upload")
     @RolesAllowed({"user", "admin"})
@@ -48,19 +64,12 @@ public class ImageResource {
     }
 
     @POST
-    @Path("/add-levels-of-detail")
+    @Path("/add-level-of-detail")
     @RolesAllowed({"system", "admin"})
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response addLevelsOfDetail(@Valid @NotNull ImageAddLODRequest request) throws Exception {
+    public Response addLevelOfDetail(@Valid @NotNull ImageAddLODRequest request) throws Exception {
         imageService.addLevelOfDetailToImage(request);
         return Response.status(Response.Status.OK).build();
-    }
-
-    @GET
-    @Path("/download/{id}")
-    public Response downloadFile(@PathParam("id") String id, @QueryParam("lod") LevelOfDetail levelOfDetail) throws Exception {
-        URL downloadUrl = imageService.downloadImage(UUID.fromString(id), levelOfDetail);
-        return Response.status(Response.Status.OK).entity(downloadUrl).build();
     }
 
     @GET
@@ -69,13 +78,5 @@ public class ImageResource {
     public Response getThumbnailsForProperties(@QueryParam("propertyId") List<Long> propertyIds) throws Exception {
         List<PropertyThumbnailsResponse> response = imageService.getThumbnailsForProperties(propertyIds);
         return Response.status(Response.Status.OK).entity(response).build();
-    }
-
-    @GET
-    @Path("/property/{propertyId}")
-    public Response getImagesForProperty(@PathParam("propertyId") Long propertyId, @QueryParam("lod") LevelOfDetail levelOfDetail) throws Exception {
-        List<ImagePropertyResponse> imageIds = imageService.getImagesForProperty(propertyId, levelOfDetail);
-        return Response.status(Response.Status.OK).entity(imageIds).build();
-    }
-    
+    }    
 } 

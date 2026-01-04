@@ -2,6 +2,8 @@ package essa.dto.file;
 
 import jakarta.validation.constraints.*;
 
+import java.util.List;
+
 public class FileUploadRequest {
     
     @NotBlank(message = "Filename is required")
@@ -20,11 +22,11 @@ public class FileUploadRequest {
 
     private String propertyId;
 
-    private String[] tagNames;
+    private List<String> tagNames;
     
     public FileUploadRequest() {}
     
-    public FileUploadRequest(String fileName, String contentType, Long size, String[] tagNames) {
+    public FileUploadRequest(String fileName, String contentType, Long size, List<String> tagNames) {
         this.fileName = fileName;
         this.contentType = contentType;
         this.size = size;
@@ -64,11 +66,11 @@ public class FileUploadRequest {
         this.propertyId = propertyId;
     }
     
-    public String[] getTagNames() {
+    public List<String> getTagNames() {
         return tagNames;
     }
     
-    public void setTagNames(String[] tagNames) {
+    public void setTagNames(List<String> tagNames) {
         this.tagNames = tagNames;
     }
 }

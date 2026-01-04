@@ -27,6 +27,8 @@ import java.util.Set;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.HashSet;
 
 @ApplicationScoped
 public class FileService {
@@ -59,11 +61,11 @@ public class FileService {
         String bucketName = gcsService.getPrivateBucketName();
         String objectName = generateObjectName(keycloakId, uuid, request.getFileName());
 
-        return handleFileUpload(keycloakId, uuid, bucketName, objectName, request);
+        return handleFileUpload(keycloakId, uuid, bucketName, objectName, FileType.FILE, request);
     }
 
     @Transactional
-    public FileUploadResponse handleFileUpload(String keycloakId, UUID uuid, String bucketName,String objectName, FileUploadRequest request) throws Exception {
+    public FileUploadResponse handleFileUpload(String keycloakId, UUID uuid, String bucketName,String objectName, FileType fileType, FileUploadRequest request) throws Exception {
         int durationMinutes = 5;
         URL gcsUploadSignedUrl = gcsService.generateV4PutObjectSignedUrl(bucketName, objectName, request.getContentType(), durationMinutes);
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(durationMinutes);
@@ -72,7 +74,7 @@ public class FileService {
         file.setId(uuid);
         file.setFileName(request.getFileName());
         file.setContentType(request.getContentType());
-        file.setFileType(FileType.FILE);
+        file.setFileType(fileType);
         file.setFileSize(request.getSize());
         file.setBucketName(bucketName);
         file.setObjectName(objectName);
@@ -95,6 +97,21 @@ public class FileService {
             propertyFile.setId(propertyFileId);
 
             file.addPropertyLink(propertyFile);
+        }
+
+        if (request.getTagNames() != null) {
+            Set<Tag> applicableTags = tagRepository.findApplicableTags(request.getTagNames(), fileType, keycloakId);
+
+            Set<String> requestTags = new HashSet<String>(request.getTagNames());
+            if (applicableTags.size() != requestTags.size()) {
+                Set<String> applicableTagNames = applicableTags.stream().map(tag -> tag.getTagName()).collect(Collectors.toSet());
+                requestTags.removeAll(applicableTagNames);
+                String errorMessage = "Invalid tags: " + String.join(", ", requestTags);
+                throw new WebApplicationException(errorMessage, Response.Status.BAD_REQUEST);
+            }
+
+            Set<Tag> fileTags = file.getTags();
+            fileTags.addAll(applicableTags);
         }
         
         fileRepository.persist(file);
@@ -222,5 +239,28 @@ public class FileService {
 
         gcsService.restoreDeletedObject(file.getBucketName(), file.getObjectName());
         file.restore();
+    }
+
+    @Transactional
+    public List<FileMetadataResponse> getAllFilesOfUser() throws Exception {
+        String keycloakId = securityIdentity.getPrincipal().getName();
+        List<File> userFiles = fileRepository.findAllFilesByOwner(keycloakId);
+
+        List<FileMetadataResponse> responseList = userFiles.stream().map(file -> {
+            FileMetadataResponse response = new FileMetadataResponse();
+            response.setId(file.getId());
+            response.setFileName(file.getFileName());
+            response.setContentType(file.getContentType());
+            response.setFileSize(file.getFileSize());
+            response.setDateUploaded(file.getCreated().toLocalDateTime());
+            response.setDateModified(file.getModified().toLocalDateTime());
+            response.setStatus(file.getStatus());
+            Set<Tag> tags = file.getTags();
+            List<String> tagNames = tags.stream().map(tag -> tag.getTagName()).toList();
+            response.setTags(tagNames);
+            return response;
+        }).toList();
+
+        return responseList;
     }
 }

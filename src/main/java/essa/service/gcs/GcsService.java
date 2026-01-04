@@ -55,7 +55,7 @@ public class GcsService {
         ImpersonatedCredentials impersonatedCredentials =
             ImpersonatedCredentials.create(
                 sourceCredentials,
-                serviceAccountEmail,
+                this.serviceAccountEmail,
                 null,
                 scopes,
                 3600

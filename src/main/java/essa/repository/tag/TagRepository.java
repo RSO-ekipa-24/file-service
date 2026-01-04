@@ -10,6 +10,8 @@ import jakarta.transaction.Transactional;
 
 import java.util.UUID;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 @ApplicationScoped
 public class TagRepository {
@@ -57,5 +59,20 @@ public class TagRepository {
                  .setParameter("fileType", fileType)
                  .setParameter("ownerKeycloakId", ownerKeycloak)
                  .getResultList();
+    }
+
+    @Transactional
+    public Set<Tag> findApplicableTags(@NotNull List<String> tagNames, @NotNull FileType fileType, @NotNull String ownerKeycloakId) {
+        String query = """
+            SELECT t FROM Tag t
+            WHERE t.fileType = :fileType
+                AND t.tagName IN :tagNames
+                AND (t.ownerKeycloakId = :ownerKeycloakId OR t.ownerKeycloakId IS NULL)
+            """;
+        return new HashSet<>(em.createQuery(query, Tag.class)
+                       .setParameter("tagNames", tagNames)
+                       .setParameter("fileType", fileType)
+                       .setParameter("ownerKeycloakId", ownerKeycloakId)
+                       .getResultList());
     }
 }

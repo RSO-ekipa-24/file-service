@@ -2,18 +2,18 @@ package essa.repository.image;
 
 import java.util.UUID;
 
-import org.jboss.logging.annotations.Param;
-import org.jboss.resteasy.annotations.Query;
-
 import essa.entity.enums.LevelOfDetail;
 import essa.dto.image.PropertyThumbnailsResponse;
 import essa.dto.image.ImagePropertyQuery;
 import essa.entity.ImageLevelOfDetail;
 import essa.entity.id.ImageLevelOfDetailId;
+import essa.repository.file.FileRepository;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -24,6 +24,9 @@ public class ImageRepository {
 
     @PersistenceContext
     EntityManager em;
+
+    @Inject
+    FileRepository fileRepository;
 
     @Transactional
     public ImageLevelOfDetail findByIdAndLOD(UUID id, LevelOfDetail levelOfDetail) {
@@ -60,7 +63,32 @@ public class ImageRepository {
     }
 
     @Transactional
-    public List<ImagePropertyQuery> findImagePreviewDataForProperty(Long propertyId, LevelOfDetail lod) {
+    public List<ImagePropertyQuery> findOriginalImagesOfProperty(Long propertyId) {
+        String query = """
+                SELECT new essa.dto.image.ImagePropertyQuery(
+                    f.id,
+                    f.bucketName,
+                    f.objectName
+                )
+                FROM File f
+                JOIN f.propertyLinks pf
+                WHERE pf.id.propertyId = :propertyId
+                  AND f.fileType = :fileType
+                """;
+        List<ImagePropertyQuery> images = em.createQuery(query, ImagePropertyQuery.class)
+            .setParameter("propertyId", propertyId)
+            .setParameter("fileType", essa.entity.enums.FileType.IMAGE)
+            .getResultList();
+
+        List<UUID> imageIds = images.stream().map(ImagePropertyQuery::getId).toList();
+        Map<UUID, List<String>> tagsByImageId = fileRepository.findTagNamesForFileIds(imageIds);
+        images.forEach(image -> image.setTags(tagsByImageId.getOrDefault(image.getId(), List.of())));
+
+        return images;
+    }
+
+    @Transactional
+    public List<ImagePropertyQuery> findLodImagesOfProperty(Long propertyId, LevelOfDetail lod) {
         String query = """
             SELECT new essa.dto.image.ImagePropertyQuery(
                 f.id,
@@ -80,23 +108,10 @@ public class ImageRepository {
             .setParameter("lod", lod)
             .getResultList();
 
-        String query2 = """
-            SELECT f.id, t.tagName
-            FROM File f
-            JOIN f.tags t
-            WHERE f.id IN :fileIds
-                """;
-        Map<UUID, List<String>> tagsByFileId = em.createQuery(query2, Object[].class)
-            .setParameter("fileIds", images.stream().map(ImagePropertyQuery::getId).toList())
-            .getResultStream()
-            .collect(
-                Collectors.groupingBy(
-                    row -> (UUID) row[0],
-                    Collectors.mapping(row -> (String) row[1], Collectors.toList())
-                )
-            );
+        List<UUID> imageIds = images.stream().map(ImagePropertyQuery::getId).toList();
+        Map<UUID, List<String>> tagsByImageId = fileRepository.findTagNamesForFileIds(imageIds);
 
-        images.forEach(image -> image.setTags(tagsByFileId.getOrDefault(image.getId(), List.of())));
+        images.forEach(image -> image.setTags(tagsByImageId.getOrDefault(image.getId(), List.of())));
 
         return images;
     }
