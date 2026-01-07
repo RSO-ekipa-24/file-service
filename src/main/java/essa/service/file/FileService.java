@@ -12,6 +12,7 @@ import essa.entity.id.PropertyFileId;
 import essa.repository.file.FileRepository;
 import essa.repository.tag.TagRepository;
 import essa.service.gcs.GcsService;
+import essa.service.image.ImageService;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.WebApplicationException;
@@ -20,6 +21,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.context.ManagedExecutor;
 
 import java.util.UUID;
 import java.util.Set;
@@ -42,8 +44,14 @@ public class FileService {
     @Inject
     GcsService gcsService;
 
+    @Inject 
+    ImageService imageService;
+
     @Inject
     SecurityIdentity securityIdentity;
+
+    @Inject
+    ManagedExecutor managedExecutor;
 
     private static final String FILE_ROOT = "files";
 
@@ -153,6 +161,19 @@ public class FileService {
         
         if (file.getStatus() == FileStatus.PENDING) {
             file.setStatus(FileStatus.AVAILABLE);
+            fileRepository.flush(); // Persist current transaction before triggering async tasks
+
+            // Trigger image classification asynchronously
+            if (file.getFileType() == FileType.IMAGE) {
+                managedExecutor.submit(() -> {
+                    try {
+                        imageService.classifyImageAsync(file.getId());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+
             return;
         }
 

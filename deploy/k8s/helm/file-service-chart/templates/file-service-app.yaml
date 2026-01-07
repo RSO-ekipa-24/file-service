@@ -58,12 +58,19 @@ spec:
             - name: QUARKUS_OIDC_CLIENT_ID
               value: "quarkus"
 
+            # Client ID for calling other services
+            - name: QUARKUS_OIDC_CLIENT_CLIENT_ID
+              value: "file-system"
+
             # Inject the secret you just created from core-secrets
-            - name: QUARKUS_OIDC_CREDENTIALS_SECRET
+            - name: QUARKUS_OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.files.secrets.name}}
                   key: {{ .Values.files.secrets.keycloakClientSecret}}
+
+            - name: IMAGE_CLASSIFICATION_URL
+              value: "http://image-classification-service:8080"
 
             - name: GCP_PROJECT_ID
               valueFrom:

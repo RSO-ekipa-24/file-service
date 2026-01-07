@@ -32,6 +32,14 @@ public class FileResource {
         return Response.status(Response.Status.OK).entity(files).build();
     }
 
+    @GET
+    @Path("/{id}")
+    @RolesAllowed({"user", "system", "admin"})
+    public Response getFileMetadata(@PathParam("id") String id) throws Exception {
+        FileMetadataResponse response = fileService.getFileMetadata(UUID.fromString(id));
+        return Response.ok(response).build();
+    }
+
     @POST
     @Path("/upload")
     @RolesAllowed({"user", "admin"})
@@ -79,14 +87,6 @@ public class FileResource {
     public Response downloadFile(@PathParam("id") String id) throws Exception {
         URL downloadUrl = fileService.downloadFile(UUID.fromString(id));
         return Response.ok(downloadUrl).build();
-    }
-
-    @GET
-    @Path("/{id}")
-    @RolesAllowed({"user", "admin"})
-    public Response getFileMetadata(@PathParam("id") String id) throws Exception {
-        FileMetadataResponse response = fileService.getFileMetadata(UUID.fromString(id));
-        return Response.ok(response).build();
     }
 }
  

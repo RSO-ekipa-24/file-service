@@ -4,6 +4,7 @@ import java.net.URL;
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 
 import essa.dto.file.FileUploadRequest;
 import essa.dto.file.FileUploadResponse;
@@ -21,7 +22,9 @@ import essa.repository.tag.TagRepository;
 import essa.repository.file.FileRepository;
 import essa.service.gcs.GcsService;
 import essa.service.file.FileService;
+import essa.service.image.ImageClassificationService;
 import essa.entity.id.ImageLevelOfDetailId;
+import org.jboss.logging.Logger;
 
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -53,7 +56,12 @@ public class ImageService {
     @Inject 
     FileService fileService;
 
+    @Inject
+    ImageClassificationService imageClassificationService;
+
     private static final String IMAGE_ROOT = "images";
+
+    private static final Logger LOG = Logger.getLogger(ImageService.class);
 
     private String generateObjectName(String keycloakId, String lod, UUID uuid, String fileName) {
         String objectName = String.format("%s/%s/%s/%s-%s", 
@@ -199,5 +207,22 @@ public class ImageService {
 
 
         return responseList;
+    }
+
+    @Transactional
+    public void classifyImage(File image) throws Exception {
+        URL downloadUrl = gcsService.generatePublicObjectUrl(image.getBucketName(), image.getObjectName());
+        LOG.infof("Classifying image %s from URL: %s", image.getId(), downloadUrl.toString());
+        Map<String, Object> classificationResult = imageClassificationService.callByUrl(downloadUrl);
+
+        LOG.infof("Classification result for image %s: %s", image.getId(), classificationResult.toString());
+    }
+
+    @Transactional
+    public void classifyImageAsync(UUID imageId) throws Exception {
+        // Start a new transaction for classification
+        File image = fileRepository.findById(imageId);
+        if (image == null) return;
+        classifyImage(image);
     }
 }

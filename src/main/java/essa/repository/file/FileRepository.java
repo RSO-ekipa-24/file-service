@@ -54,6 +54,11 @@ public class FileRepository {
     }
 
     @Transactional
+    public void flush() {
+        em.flush();
+    }
+
+    @Transactional
     public List<File> findAllFilesByOwner(String ownerId) {
         String query = "SELECT f FROM File f WHERE f.ownerKeycloakId = :ownerId AND f.status != :status";
         return em.createQuery(query, File.class)
