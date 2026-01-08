@@ -75,4 +75,18 @@ public class TagRepository {
                        .setParameter("ownerKeycloakId", ownerKeycloakId)
                        .getResultList());
     }
+
+    @Transactional
+    public Set<Tag> findSystemTagsByNamesAndFileType(@NotNull List<String> tagNames, @NotNull FileType fileType) {
+        String query = """
+            SELECT t FROM Tag t
+            WHERE t.fileType = :fileType
+                AND t.tagName IN :tagNames
+                AND t.ownerKeycloakId IS NULL
+            """;
+        return new HashSet<>(em.createQuery(query, Tag.class)
+                       .setParameter("tagNames", tagNames)
+                       .setParameter("fileType", fileType)
+                       .getResultList());
+    }
 }

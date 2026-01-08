@@ -1,5 +1,6 @@
 package essa.service.tag;
 
+import io.quarkus.logging.Log;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -9,6 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.UUID;
 import java.util.List;
+import java.util.Set;
 
 import essa.dto.tag.TagCreateRequest;
 import essa.dto.tag.TagGetResponse;
@@ -137,5 +139,26 @@ public class TagService {
         }
 
         file.getTags().remove(tag);
+    }
+
+    @Transactional
+    public void applyTagsToImage(UUID fileId, List<String> tagNames) {
+        if (tagNames == null || tagNames.isEmpty()) {
+            return;
+        }
+
+        Set<Tag> tags = tagRepository.findSystemTagsByNamesAndFileType(tagNames, FileType.IMAGE);
+        if (tags.isEmpty()) {
+            Log.warnf("Image classification Tags do not exist in the database");
+            return;
+        }
+
+        File file = fileRepository.findById(fileId);
+        if (file == null) {
+            Log.warnf("Image classification File with id %s not found", fileId.toString());
+            return;
+        }
+
+        file.getTags().addAll(tags);
     }
 }
