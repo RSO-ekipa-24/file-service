@@ -4,7 +4,7 @@ This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
 
-## Environment
+## Environmental variables
 
 Set environmental variables in ``.env`` file. Follow ``.env.example``.
 
@@ -56,10 +56,6 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 You can then execute your native executable with: `./target/core-1.0.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
-
-## Environmental variables
-
-Create ``.env`` file with environmental varaibles. Follow ``.env.example``.
 
 ## Building Docker image
 
