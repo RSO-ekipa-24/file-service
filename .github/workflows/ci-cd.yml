@@ -27,8 +27,8 @@ env:
   IMAGE: 'files-service'
 
 jobs:
-  build:
-    name: Build & Test
+  build-and-push:
+    name: Build app & (on push) build + push Docker image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -45,42 +45,21 @@ jobs:
       - name: Build package
         run: ./mvnw -B package
 
-      - name: Upload Quarkus app artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: quarkus-artifacts
-          path: target/quarkus-app/
-
-  docker-build-push:
-    name: Build Docker & Push
-    needs: build
-    runs-on: ubuntu-latest
-
-    # Only trigger this job if we are pushing / merging the code to specified branches
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Quarkus app
-        uses: actions/download-artifact@v4
-        with:
-          name: quarkus-artifacts
-          path: target/quarkus-app/
-
       - id: auth
         name: Authenticate to GCP
+        if: github.event_name == 'push'
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/881557273122/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
           service_account: github-actions-account@artful-reactor-351917.iam.gserviceaccount.com
 
       - name: Configure Docker for GAR
+        if: github.event_name == 'push'
         run: |
           gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev --quiet
 
       - name: Build & Push Docker Image
+        if: github.event_name == 'push'
         run: |
           IMAGE_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE}:${GITHUB_SHA}"
           docker build \
@@ -93,7 +72,7 @@ jobs:
 
   deploy-dev:
     name: Deploy to DEV (Helm)
-    needs: docker-build-push
+    needs: build-and-push
     runs-on: ubuntu-latest
 
     # This job will only run when a commit is pushed to the dev branch. If you push to main or create a PR from another branch, this job will be skipped
