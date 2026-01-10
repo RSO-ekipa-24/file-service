@@ -6,6 +6,7 @@ import essa.entity.enums.LevelOfDetail;
 import essa.dto.image.PropertyThumbnailsResponse;
 import essa.dto.image.ImagePropertyQuery;
 import essa.entity.enums.FileType;
+import essa.entity.enums.FileStatus;
 import essa.entity.File;
 import essa.entity.ImageLevelOfDetail;
 import essa.entity.id.ImageLevelOfDetailId;
