@@ -65,20 +65,24 @@ public class ImageRepository {
     @Transactional
     public List<ImagePropertyQuery> findOriginalImagesOfProperty(Long propertyId) {
         String query = """
-                SELECT new essa.dto.image.ImagePropertyQuery(
-                    f.id,
-                    f.bucketName,
-                    f.objectName
-                )
-                FROM File f
-                JOIN f.propertyLinks pf
-                WHERE pf.id.propertyId = :propertyId
-                  AND f.fileType = :fileType
-                """;
+            SELECT new essa.dto.image.ImagePropertyQuery(
+                f.id,
+                f.bucketName,
+                f.objectName
+            )
+            FROM File f
+            JOIN f.propertyLinks pf
+            WHERE pf.id.propertyId = :propertyId
+              AND f.fileType = :fileType
+              AND f.status = :status
+            """;
         List<ImagePropertyQuery> images = em.createQuery(query, ImagePropertyQuery.class)
-            .setParameter("propertyId", propertyId)
-            .setParameter("fileType", FileType.IMAGE)
-            .getResultList();
+                .setParameter("propertyId", propertyId)
+                .setParameter("fileType", FileType.IMAGE)
+                .setParameter("status", FileStatus.AVAILABLE)
+                .getResultList();
+
+        if (images.isEmpty()) return images;
 
         List<UUID> imageIds = images.stream().map(ImagePropertyQuery::getId).toList();
         Map<UUID, List<String>> tagsByImageId = fileRepository.findTagNamesForFileIds(imageIds);
@@ -90,23 +94,27 @@ public class ImageRepository {
     @Transactional
     public List<ImagePropertyQuery> findLodImagesOfProperty(Long propertyId, LevelOfDetail lod) {
         String query = """
-            SELECT new essa.dto.image.ImagePropertyQuery(
-                f.id,
-                f.bucketName,
-                i.objectName
-            )
-            FROM File f
-            JOIN f.propertyLinks pf
-            JOIN f.imageLOD i
-            WHERE pf.id.propertyId = :propertyId
-              AND f.fileType = :fileType
-              AND i.id.levelOfDetail = :lod
-        """;
+        SELECT new essa.dto.image.ImagePropertyQuery(
+            f.id,
+            f.bucketName,
+            i.objectName
+        )
+        FROM File f
+        JOIN f.propertyLinks pf
+        JOIN f.imageLOD i
+        WHERE pf.id.propertyId = :propertyId
+          AND f.fileType = :fileType
+          AND i.id.levelOfDetail = :lod
+          AND f.status = :status
+    """;
         List<ImagePropertyQuery> images = em.createQuery(query, ImagePropertyQuery.class)
-            .setParameter("propertyId", propertyId)
-            .setParameter("fileType", FileType.IMAGE)
-            .setParameter("lod", lod)
-            .getResultList();
+                .setParameter("propertyId", propertyId)
+                .setParameter("fileType", FileType.IMAGE)
+                .setParameter("lod", lod)
+                .setParameter("status", FileStatus.AVAILABLE)
+                .getResultList();
+
+        if (images.isEmpty()) return images;
 
         List<UUID> imageIds = images.stream().map(ImagePropertyQuery::getId).toList();
         Map<UUID, List<String>> tagsByImageId = fileRepository.findTagNamesForFileIds(imageIds);
