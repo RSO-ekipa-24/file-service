@@ -1,10 +1,15 @@
 package essa.dto.file;
 
 import essa.entity.enums.FileStatus;
+import essa.entity.File;
+import essa.entity.PropertyFile;
+import essa.entity.Tag;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class FileMetadataResponse {
     private UUID id;
@@ -14,6 +19,7 @@ public class FileMetadataResponse {
     private LocalDateTime dateUploaded;
     private LocalDateTime dateModified;
     private FileStatus status;
+    private List<Long> propertyIds;
     private List<String> tags;
 
     public FileMetadataResponse() {}
@@ -26,7 +32,20 @@ public class FileMetadataResponse {
         this.dateUploaded = dateUploaded;
         this.dateModified = dateModified;
         this.status = status;
+        this.propertyIds = new ArrayList<>();
         this.tags = new ArrayList<>();
+    }
+
+    public FileMetadataResponse(File file) {
+        this.id = file.getId();
+        this.fileName = file.getFileName();
+        this.contentType = file.getContentType();
+        this.fileSize = file.getFileSize();
+        this.dateUploaded = file.getCreated().toLocalDateTime();
+        this.dateModified = file.getModified().toLocalDateTime();
+        this.status = file.getStatus();
+        this.propertyIds = file.getPropertyLinks().stream().map(pf -> pf.getId().getPropertyId()).toList();
+        this.tags = file.getTags().stream().map(Tag::getTagName).toList();
     }
 
     public UUID getId() {
@@ -59,6 +78,14 @@ public class FileMetadataResponse {
 
     public void setFileSize(long fileSize) {
         this.fileSize = fileSize;
+    }
+
+    public List<Long> getPropertyIds() {
+        return  propertyIds;
+    }
+
+    public void setPropertyIds(List<Long> propertyIds) {
+        this.propertyIds = propertyIds;
     }
 
     public LocalDateTime getDateUploaded() {

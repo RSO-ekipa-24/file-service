@@ -126,7 +126,7 @@ public class GcsService {
 
     public void restoreDeletedObject(String bucketName, String objectName) throws Exception {
         Long generation = findLatestDeletedGeneration(bucketName, objectName);
-        if (generation != null) {
+        if (generation == null) {
             throw new WebApplicationException("Object not found", Response.Status.NOT_FOUND);
         }
 

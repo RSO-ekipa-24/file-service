@@ -21,6 +21,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.core.Response;
+import org.jboss.logging.Logger;
 
 import java.util.UUID;
 import java.util.Set;
@@ -50,6 +51,8 @@ public class FileService {
     SecurityIdentity securityIdentity;
 
     private static final String FILE_ROOT = "files";
+
+    private static final Logger LOG = Logger.getLogger(FileService.class);
 
     private String generateObjectName(String keycloakId, UUID uuid, String fileName) {
         String objectName = String.format("%s/%s/%s-%s", 
@@ -132,7 +135,7 @@ public class FileService {
     public void deleteFile(@NotNull UUID id) throws Exception {
         File file = findFileWithPermissionCheck(id);
 
-        // GCS has soft delete enabled - file persists for GCP_RETENTION_DAYS before permanent deletion
+        // GCS has soft delete enabled - file persists for 7 days before permanent deletion
         boolean deleted = gcsService.deleteObject(file.getBucketName(), file.getObjectName());
         if (!deleted) {
             throw new WebApplicationException("Failed to delete file from storage", Response.Status.INTERNAL_SERVER_ERROR);
@@ -190,28 +193,6 @@ public class FileService {
     }
 
     @Transactional
-    public FileMetadataResponse getFileMetadata(@NotNull UUID id) throws Exception {
-        File file = findFileWithPermissionCheck(id);
-        if (file == null) {
-            throw new WebApplicationException("File not found", Response.Status.NOT_FOUND);
-        }
-
-        FileMetadataResponse response = new FileMetadataResponse();
-        response.setId(file.getId());
-        response.setFileName(file.getFileName());
-        response.setContentType(file.getContentType());
-        response.setFileSize(file.getFileSize());
-        response.setDateUploaded(file.getCreated().toLocalDateTime());
-        response.setDateModified(file.getModified().toLocalDateTime());
-        response.setStatus(file.getStatus());
-        Set<Tag> tags = file.getTags();
-        List<String> tagNames = tags.stream().map(tag -> tag.getTagName()).toList();
-        response.setTags(tagNames);
-
-        return response;
-    }
-
-    @Transactional
     public File findFileWithPermissionCheck(UUID id) throws Exception {
         String keycloakId = securityIdentity.getPrincipal().getName();
         File file = fileRepository.findById(id);
@@ -221,27 +202,10 @@ public class FileService {
         if (!file.getOwnerKeycloakId().equals(keycloakId)) {
             throw new WebApplicationException("Forbidden", Response.Status.FORBIDDEN);
         }
+        if (file.getFileType() == FileType.IMAGE) {
+            throw new WebApplicationException("Use /image API to access image files", Response.Status.BAD_REQUEST);
+        }
         return file;
-    }
-
-    @Transactional
-    public List<FileMetadataResponse> getDeletedFiles() throws Exception {
-        String keycloakId = securityIdentity.getPrincipal().getName();
-        List<File> deletedFiles = fileRepository.findDeletedFilesByOwner(keycloakId);
-
-        List<FileMetadataResponse> responseList = deletedFiles.stream().map(file -> {
-            FileMetadataResponse response = new FileMetadataResponse();
-            response.setId(file.getId());
-            response.setFileName(file.getFileName());
-            response.setContentType(file.getContentType());
-            response.setFileSize(file.getFileSize());
-            response.setDateUploaded(file.getCreated().toLocalDateTime());
-            response.setDateModified(file.getModified().toLocalDateTime());
-            response.setStatus(file.getStatus());
-            return response;
-        }).toList();
-
-        return responseList;
     }
 
     @Transactional
@@ -256,23 +220,31 @@ public class FileService {
     }
 
     @Transactional
+    public List<FileMetadataResponse> getDeletedFiles() throws Exception {
+        String keycloakId = securityIdentity.getPrincipal().getName();
+        List<File> deletedFiles = fileRepository.findDeletedFilesByOwner(keycloakId);
+
+        List<FileMetadataResponse> responseList = deletedFiles.stream().map(file -> {
+            return new FileMetadataResponse(file);
+        }).toList();
+
+        return responseList;
+    }
+
+    @Transactional
+    public FileMetadataResponse getFileMetadata(@NotNull UUID id) throws Exception {
+        File file = findFileWithPermissionCheck(id);
+
+        return new FileMetadataResponse(file);
+    }
+
+    @Transactional
     public List<FileMetadataResponse> getAllFilesOfUser() throws Exception {
         String keycloakId = securityIdentity.getPrincipal().getName();
         List<File> userFiles = fileRepository.findAllFilesByOwner(keycloakId);
 
         List<FileMetadataResponse> responseList = userFiles.stream().map(file -> {
-            FileMetadataResponse response = new FileMetadataResponse();
-            response.setId(file.getId());
-            response.setFileName(file.getFileName());
-            response.setContentType(file.getContentType());
-            response.setFileSize(file.getFileSize());
-            response.setDateUploaded(file.getCreated().toLocalDateTime());
-            response.setDateModified(file.getModified().toLocalDateTime());
-            response.setStatus(file.getStatus());
-            Set<Tag> tags = file.getTags();
-            List<String> tagNames = tags.stream().map(tag -> tag.getTagName()).toList();
-            response.setTags(tagNames);
-            return response;
+            return new FileMetadataResponse(file);
         }).toList();
 
         return responseList;
