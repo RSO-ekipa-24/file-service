@@ -1,8 +1,28 @@
-# files
+# Files
 
 This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
 If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+
+### Branching Strategy
+
+- main: The production-ready branch.
+- dev: The integration branch for features and fixes, often considered the "next release" branch.
+- feature/: Branches for developing new features. These branches are created from dev and merged back into dev when the feature is complete.
+- bugfix/: Branches for fixing bugs in the dev branch.
+- release/: Branches for preparing a new production release. These branches allow for last-minute fixes and preparing release notes.
+- hotfix/: Branches for fixing critical issues in the main branch. These are created from main and merged back into both main and dev.
+
+### Technology stack :computer:
+
+| Category                  | Technology / Tool |
+|----------------------------|-------------------|
+| Backend framework          | Quarkus (Java)    |
+| Build tool                 | Maven             |
+| Containerization           | Docker            |
+| CI/CD Automation           | GitHub Actions    |
+
+---
 
 ## Environmental variables
 
@@ -181,15 +201,6 @@ Easily start your REST Web Services
 
 [Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
 
-## Branching Strategy
-
-- main: The production-ready branch.
-- dev: The integration branch for features and fixes, often considered the "next release" branch.
-- feature/: Branches for developing new features. These branches are created from dev and merged back into dev when the feature is complete.
-- bugfix/: Branches for fixing bugs in the dev branch.
-- release/: Branches for preparing a new production release. These branches allow for last-minute fixes and preparing release notes.
-- hotfix/: Branches for fixing critical issues in the main branch. These are created from main and merged back into both main and dev.
-
 
 #### Build and push the image to Google Registry:
 
@@ -224,3 +235,13 @@ docker build -f src/main/docker/Dockerfile.jvm -t europe-central2-docker.pkg.dev
 ```bash
 docker push europe-central2-docker.pkg.dev/artful-reactor-351917/essa-images/files-service:$GIT_HASH
 ```
+
+
+#### Deploy via helm chart :arrow_up:
+
+Move to `file-service/deploy/k8s/helm` and run:
+
+```bash
+helm upgrade --install files-release ./file-service-chart --set files.deployment.image.tag=$GIT_HASH
+```
+
