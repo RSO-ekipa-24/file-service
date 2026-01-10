@@ -43,7 +43,7 @@ jobs:
 
       # (skip tests for now as we don't have them yet)
       - name: Build package
-        run: ./mvnw -B package -DskipTests
+        run: ./mvnw -B package
 
       - id: auth
         name: Authenticate to GCP

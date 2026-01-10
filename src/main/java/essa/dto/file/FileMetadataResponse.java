@@ -2,14 +2,12 @@ package essa.dto.file;
 
 import essa.entity.enums.FileStatus;
 import essa.entity.File;
-import essa.entity.PropertyFile;
 import essa.entity.Tag;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class FileMetadataResponse {
     private UUID id;
